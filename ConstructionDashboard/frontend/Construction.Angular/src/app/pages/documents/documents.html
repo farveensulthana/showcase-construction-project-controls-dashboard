@@ -1,0 +1,43 @@
+<div class="documents-page">
+  <header class="page-header">
+    <h1>Documents</h1>
+    <p>RFIs, submittals, drawings, and specification documents</p>
+  </header>
+
+  @if (loading()) {
+    <div class="loading-state" aria-live="polite">Loading documents…</div>
+  }
+  @if (error()) {
+    <div class="alert alert-error" role="alert">{{ error() }}</div>
+  }
+
+  @if (!loading() && !error()) {
+    <div class="documents-layout">
+      <div class="card document-list-card">
+        <ejs-grid
+          [dataSource]="documents()"
+          [allowPaging]="true"
+          [allowSorting]="true"
+          [allowFiltering]="true"
+          [pageSettings]="pageSettings"
+          [filterSettings]="filterSettings"
+          (rowSelected)="onRowSelected($event)"
+          [selectionSettings]="selectionSettings"
+        >
+          <e-columns>
+            <e-column field="documentNumber" headerText="Doc #" width="120"></e-column>
+            <e-column field="title" headerText="Title" width="200"></e-column>
+            <e-column field="type" headerText="Type" width="120"></e-column>
+            <e-column field="revision" headerText="Rev" width="80"></e-column>
+            <e-column field="submittedDate" headerText="Submitted" width="130" type="date" format="yMd"></e-column>
+            <e-column field="status" headerText="Status" width="120"></e-column>
+          </e-columns>
+        </ejs-grid>
+      </div>
+
+      <div class="card pdf-viewer-card">
+        <ejs-pdfviewer id="document-pdf-viewer" [documentPath]="sampleUrl" resourceUrl="/ej2-pdfviewer-lib" style="height: 640px"></ejs-pdfviewer>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,84 @@
+.schedule-page {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+.schedule-page .select {
+  min-width: 200px;
+}
+
+.schedule-page .month-navigator {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.schedule-page .month-navigator .btn {
+  border-radius: 0;
+}
+
+.schedule-page .month-navigator span {
+  padding: 0 var(--space-md);
+  font-size: var(--text-small-size);
+  font-weight: 600;
+}
+
+.schedule-page .schedule-view-toggle .toolbar-left {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 3px;
+}
+
+.schedule-page .schedule-view-toggle .btn.is-active {
+  background: var(--color-surface);
+  color: var(--color-accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.schedule-page .gantt-card {
+  min-height: 420px;
+}
+
+.schedule-page .gantt-table-wrap {
+  overflow: auto;
+}
+
+.schedule-page .gantt-table {
+  table-layout: auto;
+}
+
+.schedule-page .timeline-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 340px;
+  height: 28px;
+  position: relative;
+}
+
+.schedule-page .timeline-track {
+  position: absolute;
+  height: 18px;
+  background: rgba(37, 99, 235, 0.18);
+  border-radius: var(--radius-md);
+}
+
+.schedule-page .timeline-progress {
+  position: absolute;
+  height: 8px;
+  background: var(--color-success);
+  border-radius: var(--radius-full);
+  top: 10px;
+}
+
+.schedule-page .timeline-progress-label {
+  margin-left: auto;
+  font-size: var(--text-caption-size);
+}
+
+.schedule-page .milestone-card,
+.schedule-page .schedule-gantt-syncfusion {
+  margin-top: var(--space-xl);
+}

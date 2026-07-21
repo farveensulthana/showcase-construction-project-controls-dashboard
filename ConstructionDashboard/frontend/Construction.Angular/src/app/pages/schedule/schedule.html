@@ -1,0 +1,134 @@
+<div class="schedule-page">
+  <header class="page-header">
+    <h1>Schedule</h1>
+    <p>Cross-project schedule view with milestone and task tracking.</p>
+  </header>
+
+  @if (loading()) {
+    <div class="loading-state" aria-live="polite">Loading schedule…</div>
+  }
+  @if (error()) {
+    <div class="alert alert-error" role="alert">{{ error() }}</div>
+  }
+
+  @if (!loading() && !error()) {
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <select class="select" [value]="projectId()" (change)="onProjectFilterChange($any($event.target).value)">
+          <option value="All">All Projects</option>
+          @for (p of projects(); track p.id) {
+            <option [value]="p.id">{{ p.name }}</option>
+          }
+        </select>
+        <div class="month-navigator">
+          <button type="button" class="btn btn-ghost btn-sm" (click)="prevMonth()">
+            <i class="icon icon-chevron-left" aria-hidden="true"></i>
+          </button>
+          <span class="text-secondary">{{ getMonthLabel() }}</span>
+          <button type="button" class="btn btn-ghost btn-sm" (click)="nextMonth()">
+            <i class="icon icon-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+      <div class="toolbar-right">
+        <button type="button" class="btn btn-secondary btn-sm">
+          <i class="icon icon-filter" aria-hidden="true"></i>Filter
+        </button>
+        <button type="button" class="btn btn-primary">
+          <i class="icon icon-plus" aria-hidden="true"></i>Add Task
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar schedule-view-toggle">
+      <div class="toolbar-left" style="margin: 0">
+        <button type="button" class="btn btn-ghost btn-sm" [class.is-active]="viewMode() === 'Month'" (click)="setViewMode('Month')" [style.color]="viewMode() === 'Month' ? 'var(--color-accent)' : null">Month</button>
+        <button type="button" class="btn btn-ghost btn-sm" [class.is-active]="viewMode() === 'Week'" (click)="setViewMode('Week')" [style.color]="viewMode() === 'Week' ? 'var(--color-accent)' : null">Week</button>
+        <button type="button" class="btn btn-ghost btn-sm" [class.is-active]="viewMode() === 'Day'" (click)="setViewMode('Day')" [style.color]="viewMode() === 'Day' ? 'var(--color-accent)' : null">Day</button>
+      </div>
+    </div>
+
+    <div class="card gantt-card">
+      <div class="card-header">
+        <div><h2 class="card-title">Gantt Timeline</h2><p class="card-subtitle">Work breakdown and dependencies across active projects</p></div>
+      </div>
+      <div class="table-container gantt-table-wrap">
+        <table class="data-table gantt-table">
+          <thead>
+            <tr>
+              <th style="min-width: 260px">Task</th>
+              <th style="min-width: 100px">Start</th>
+              <th style="min-width: 100px">Finish</th>
+              <th style="min-width: 100px">% Complete</th>
+              <th style="min-width: 360px">Timeline</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (filteredTasks().length === 0) {
+              <tr><td colspan="5" class="empty-state" style="text-align: center">No tasks match the current filters</td></tr>
+            }
+            @for (task of pagedRows(); track task.TaskID) {
+              <tr>
+                <td [style.font-weight]="isChildRow(task) ? 400 : 600" [style.padding-left.px]="isChildRow(task) ? 36 : null">{{ task.TaskName }}</td>
+                <td>{{ shortDate(task.StartDate) }}</td>
+                <td>{{ shortDate(task.EndDate) }}</td>
+                <td>{{ task.Progress }}%</td>
+                <td>
+                  <div class="timeline-cell">
+                    <div class="timeline-track" [style.left.%]="timelineLeft(task)" [style.width.%]="timelineWidth(task)"></div>
+                    <div class="timeline-progress" [style.left.%]="timelineLeft(task)" [style.width.%]="progressWidth(task)"></div>
+                    @if (!isChildRow(task)) {
+                      <span class="timeline-progress-label text-secondary">{{ task.Progress }}%</span>
+                    }
+                  </div>
+                </td>
+              </tr>
+              @if (!isChildRow(task)) {
+                @for (child of getChildRows(task); track child.TaskID) {
+                  <tr>
+                    <td style="padding-left: 36px">{{ child.TaskName }}</td>
+                    <td>{{ shortDate(child.StartDate) }}</td>
+                    <td>{{ shortDate(child.EndDate) }}</td>
+                    <td>{{ child.Progress }}%</td>
+                    <td>
+                      <div class="timeline-cell">
+                        <div class="timeline-track" [style.left.%]="timelineLeft(child)" [style.width.%]="timelineWidth(child)"></div>
+                        <div class="timeline-progress" [style.left.%]="timelineLeft(child)" [style.width.%]="progressWidth(child)"></div>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-pagination [page]="page()" [pageSize]="pageSize" [totalCount]="allVisibleRows().length" (pageChange)="page.set($event)"></app-pagination>
+    </div>
+
+    <div class="card milestone-card">
+      <div class="card-header">
+        <div><h2 class="card-title">Critical Path Milestones</h2><p class="card-subtitle">Next 30 days</p></div>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead><tr><th>Project</th><th>Milestone</th><th>Date</th><th>Float</th><th>Status</th></tr></thead>
+          <tbody>
+            @if (milestones().length === 0) {
+              <tr><td colspan="5" class="empty-state" style="text-align: center">No upcoming milestones</td></tr>
+            }
+            @for (m of milestones(); track m.projectCode + m.title) {
+              <tr>
+                <td class="font-mono">{{ m.projectCode }}</td>
+                <td>{{ m.title }}</td>
+                <td>{{ formatDate(m.dueDate) }}</td>
+                <td>{{ milestoneFloat(m) }} days</td>
+                <td><span class="badge" [class]="milestoneCriticality(m).className">{{ milestoneCriticality(m).label }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>

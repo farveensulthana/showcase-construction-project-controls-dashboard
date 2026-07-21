@@ -1,0 +1,15 @@
+.workflows-page {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+.workflow-diagram-card {
+  padding: 0;
+  min-height: 520px;
+  overflow: hidden;
+}
+
+.workflow-diagram-card > .e-control.e-diagram {
+  width: 100%;
+  height: 100%;
+}

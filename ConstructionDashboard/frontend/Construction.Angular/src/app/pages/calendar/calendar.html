@@ -1,0 +1,19 @@
+<div class="calendar-page">
+  <header class="page-header">
+    <h1>Calendar</h1>
+    <p>Milestones, inspections, meetings, and scheduled site activities</p>
+  </header>
+
+  @if (loading()) {
+    <div class="loading-state" aria-live="polite">Loading calendar…</div>
+  }
+  @if (error()) {
+    <div class="alert alert-error" role="alert">{{ error() }}</div>
+  }
+
+  @if (!loading() && !error()) {
+    <div class="card schedule-card">
+      <ejs-schedule height="650px" [selectedDate]="selectedDate" currentView="Month" [eventSettings]="eventSettings" [views]="views"></ejs-schedule>
+    </div>
+  }
+</div>

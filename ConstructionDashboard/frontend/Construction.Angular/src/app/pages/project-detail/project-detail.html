@@ -1,0 +1,378 @@
+<div class="project-detail-page">
+  @if (error()) {
+    <div class="alert alert-error" role="alert">{{ error() }}</div>
+  } @else if (loading()) {
+    <div class="loading-state" aria-live="polite">Loading project details…</div>
+  }
+
+  @if (!loading() && !error() && project() && kpis(); as ready) {
+    <div class="page-header">
+      <div class="breadcrumb">
+        <button type="button" class="btn btn-ghost btn-icon btn-sm" (click)="goBack()" aria-label="Back to projects">
+          <i class="icon icon-arrow-left" aria-hidden="true"></i>
+        </button>
+        <span>Projects</span>
+        <span>/</span>
+        <span class="font-mono">{{ project()!.code }}</span>
+      </div>
+      <h1>{{ project()!.name }}</h1>
+      <p>{{ headerSubtitle }}</p>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Project detail tabs">
+      @for (tab of tabs; track tab) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="activeTab() === tab"
+          class="tab"
+          [class.is-active]="activeTab() === tab"
+          (click)="activeTab.set(tab)"
+        >
+          {{ tab }}
+          @if (tabBadge(tab) > 0) {
+            <span class="badge badge-error" style="margin-left: 8px">{{ tabBadge(tab) }}</span>
+          }
+        </button>
+      }
+    </div>
+
+    @if (activeTab() === 'Overview') {
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Percent Complete</div>
+          <div class="kpi-value">{{ kpis()!.percentComplete }}%</div>
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              [class]="kpis()!.percentComplete >= 75 ? 'is-success' : kpis()!.percentComplete >= 40 ? 'is-warning' : 'is-error'"
+              [style.width.%]="kpis()!.percentComplete"
+            ></div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Cost Variance</div>
+          <div class="kpi-value" [class]="kpis()!.costVariance >= 0 ? 'text-success' : 'text-error'">
+            {{ kpis()!.costVariance >= 0 ? '+' : '-' }}{{ formatCurrency(kpis()!.costVariance < 0 ? -kpis()!.costVariance : kpis()!.costVariance) }}
+          </div>
+          <div class="kpi-change" [class]="kpis()!.costVariance >= 0 ? 'positive' : 'negative'">
+            <i class="icon icon-{{ kpis()!.costVariance >= 0 ? 'arrow-up-right' : 'arrow-down-right' }}" aria-hidden="true"></i>
+            {{ kpis()!.costVariance >= 0 ? 'Under budget' : 'Over budget' }}
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Schedule Variance</div>
+          <div class="kpi-value" [class]="kpis()!.scheduleVariance >= 0 ? 'text-success' : 'text-error'">
+            {{ formatPercent(kpis()!.scheduleVariance) }}
+          </div>
+          <div class="kpi-change" [class]="kpis()!.scheduleVariance >= 0 ? 'positive' : 'negative'">
+            <i class="icon icon-{{ kpis()!.scheduleVariance >= 0 ? 'arrow-up-right' : 'arrow-down-right' }}" aria-hidden="true"></i>
+            {{ kpis()!.scheduleVariance >= 0 ? 'Ahead of schedule' : 'Behind schedule' }}
+          </div>
+        </div>
+        <div class="kpi-card is-clickable" role="button" tabindex="0" (click)="goTo('/rfis')" (keydown)="onOpenRfisKeydown($event)">
+          <div class="kpi-label">Open RFIs</div>
+          <div class="kpi-value">{{ kpis()!.openRfis }}</div>
+          <div class="kpi-change" [class]="kpis()!.overdueRfis > 0 ? 'warning' : 'positive'">
+            <i class="icon icon-{{ kpis()!.overdueRfis > 0 ? 'clock' : 'check-circle' }}" aria-hidden="true"></i>
+            {{ kpis()!.overdueRfis > 0 ? kpis()!.overdueRfis + ' overdue' : 'No overdue' }}
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Open Submittals</div>
+          <div class="kpi-value">{{ kpis()!.openSubmittals }}</div>
+          <div class="kpi-change" [class]="kpis()!.overdueSubmittals > 0 ? 'warning' : 'positive'">
+            <i class="icon icon-{{ kpis()!.overdueSubmittals > 0 ? 'clock' : 'check-circle' }}" aria-hidden="true"></i>
+            {{ kpis()!.overdueSubmittals > 0 ? kpis()!.overdueSubmittals + ' overdue' : 'On track' }}
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Pending Change Orders</div>
+          <div class="kpi-value">{{ formatCurrency(kpis()!.pendingChangeOrdersAmount) }}</div>
+          <div class="kpi-change" [class]="kpis()!.pendingChangeOrdersAmount > 0 ? 'warning' : 'positive'">
+            <i class="icon icon-{{ kpis()!.pendingChangeOrdersAmount > 0 ? 'file-plus' : 'check-circle' }}" aria-hidden="true"></i>
+            {{ kpis()!.pendingChangeOrdersAmount > 0 ? kpis()!.openChangeOrders + ' pending review' : 'No pending COs' }}
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-grid">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Upcoming Milestones</h2>
+              <p class="card-subtitle">Next 30 days</p>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr><th>Milestone</th><th>Planned Date</th><th>Status</th><th>Owner</th></tr>
+              </thead>
+              <tbody>
+                @if (milestones().length === 0) {
+                  <tr><td colspan="4" class="text-secondary" style="text-align: center">No upcoming milestones</td></tr>
+                }
+                @for (m of milestones(); track m.id) {
+                  <tr>
+                    <td>{{ m.title }}</td>
+                    <td>{{ formatDate(m.plannedDate) }}</td>
+                    <td><span class="badge" [class]="milestoneStatusBadgeClass[m.status]">{{ milestoneStatusLabel[m.status] }}</span></td>
+                    <td>{{ m.owner ?? '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Risk Register</h2>
+              <p class="card-subtitle">Top open items</p>
+            </div>
+          </div>
+          <div class="card-body">
+            @if (risks().length === 0) {
+              <div class="text-secondary" style="text-align: center">No open risks</div>
+            }
+            @for (r of risks(); track r.id) {
+              <div class="alert" [class]="riskAlertClass[r.severity] ?? 'alert-info'">
+                <i class="icon icon-{{ r.severity === 'Critical' ? 'shield-alert' : 'alert-triangle' }}" aria-hidden="true"></i>
+                <div>
+                  <div style="font-weight: 600">{{ r.title }}</div>
+                  <div style="font-size: var(--text-caption-size); opacity: 0.9">
+                    {{ r.impactDisplay }}{{ r.owner ? ' · Owner: ' + r.owner : '' }}
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Document Workflow</h2>
+            <p class="card-subtitle">Last 30 days · {{ project()!.code }}</p>
+          </div>
+          <div class="toolbar-right">
+            <button type="button" class="btn btn-ghost btn-sm text-secondary" (click)="goTo('/documents')">
+              <i class="icon icon-file-text" aria-hidden="true"></i> View documents
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm text-secondary" (click)="goTo('/rfis')">
+              <i class="icon icon-message-square" aria-hidden="true"></i> View RFIs
+            </button>
+          </div>
+        </div>
+        <div class="table-container document-table">
+          <table class="data-table">
+            <thead>
+              <tr><th>Document</th><th>Type</th><th>Revision</th><th>Submitted</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              @if (documents().length === 0) {
+                <tr><td colspan="5" class="text-secondary" style="text-align: center">No recent documents</td></tr>
+              }
+              @for (d of documents(); track d.id) {
+                <tr role="button" tabindex="0" (click)="previewDocument.set(d)" (keydown)="onDocumentRowKeydown($event, d)">
+                  <td>{{ d.title }}</td>
+                  <td>{{ d.type }}</td>
+                  <td class="font-mono">{{ d.revision ?? '—' }}</td>
+                  <td>{{ formatDate(d.submittedDate) }}</td>
+                  <td><span class="badge" [class]="documentStatusClass(d.status)">{{ d.status }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: var(--space-xl)">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Project Details</h2>
+            <p class="card-subtitle">General information</p>
+          </div>
+        </div>
+        <ul class="meta-list">
+          <li><span class="meta-label">Status</span><span class="badge" [class]="healthBadgeClass[project()!.healthStatus]">{{ project()!.status }}</span></li>
+          <li><span class="meta-label">Health</span><span class="badge" [class]="healthBadgeClass[project()!.healthStatus]">{{ splitHealthLabel(project()!.healthStatus) }}</span></li>
+          <li><span class="meta-label">Project Manager</span><span class="meta-value">{{ project()!.manager ?? '—' }}</span></li>
+          <li><span class="meta-label">Duration</span><span class="meta-value">{{ formatDate(project()!.startDate) }} – {{ formatDate(project()!.endDate) }}</span></li>
+          <li><span class="meta-label">Location</span><span class="meta-value">{{ project()!.location ?? '—' }}</span></li>
+          <li><span class="meta-label">Budget</span><span class="meta-value">{{ formatCurrency(project()!.budget) }}</span></li>
+        </ul>
+      </div>
+
+      <app-modal
+        [open]="!!previewDocument()"
+        [title]="previewDocument()?.title ?? ''"
+        [subtitle]="previewDocument() ? (previewDocument()!.type + ' · Rev ' + (previewDocument()!.revision ?? '—') + ' · Submitted ' + formatDate(previewDocument()!.submittedDate)) : undefined"
+        size="xl"
+        (closed)="previewDocument.set(null)"
+      >
+        @if (previewDocument(); as doc) {
+          <div class="modal-detail-grid">
+            <div class="modal-detail-item">
+              <span class="modal-detail-label">Document #</span>
+              <span class="modal-detail-value font-mono">{{ doc.documentNumber }}</span>
+            </div>
+            <div class="modal-detail-item">
+              <span class="modal-detail-label">Status</span>
+              <span class="badge" [class]="documentStatusClass(doc.status)" style="width: fit-content">{{ doc.status }}</span>
+            </div>
+          </div>
+          <div style="height: 620px; border-radius: var(--radius-md); overflow: hidden">
+            <ejs-pdfviewer id="project-document-pdf-viewer" [documentPath]="sampleUrl" resourceUrl="/ej2-pdfviewer-lib" style="height: 620px"></ejs-pdfviewer>
+          </div>
+        }
+      </app-modal>
+    }
+
+    @if (activeTab() === 'Schedule') {
+      <h2 class="section-title">Schedule</h2>
+      <p class="section-subtitle">Key milestones and planned dates for the project.</p>
+      <div class="table-container" style="margin-top: var(--space-lg)">
+        <table class="data-table">
+          <thead>
+            <tr><th>Milestone</th><th>Description</th><th>Planned Date</th><th>Status</th><th>Owner</th></tr>
+          </thead>
+          <tbody>
+            @if (milestones().length === 0) {
+              <tr><td colspan="5" class="text-secondary" style="text-align: center">No milestones</td></tr>
+            }
+            @for (m of milestones(); track m.id) {
+              <tr>
+                <td style="font-weight: 600">{{ m.title }}</td>
+                <td class="text-secondary truncate" style="max-width: 320px">{{ m.description ?? '—' }}</td>
+                <td>{{ formatDate(m.plannedDate) }}</td>
+                <td><span class="badge" [class]="milestoneStatusBadgeClass[m.status]">{{ milestoneStatusLabel[m.status] }}</span></td>
+                <td>{{ m.owner ?? '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab() === 'Cost') {
+      <h2 class="section-title">Cost Control</h2>
+      <p class="section-subtitle">Budget status, cost variance, and pending change orders.</p>
+      <div class="kpi-grid" style="margin-top: var(--space-lg)">
+        <div class="kpi-card">
+          <div class="kpi-label">Budget</div>
+          <div class="kpi-value">{{ formatCurrency(kpis()!.budget) }}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Spent</div>
+          <div class="kpi-value">{{ formatCurrency(kpis()!.spent) }}</div>
+          <div class="progress-bar">
+            <div class="progress-fill" [class]="kpis()!.spent / kpis()!.budget > 0.9 ? 'is-error' : 'is-success'" [style.width.%]="spentPercent(kpis()!.spent, kpis()!.budget)"></div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Cost Variance</div>
+          <div class="kpi-value" [class]="kpis()!.costVariance >= 0 ? 'text-success' : 'text-error'">
+            {{ kpis()!.costVariance >= 0 ? '+' : '-' }}{{ formatCurrency(kpis()!.costVariance < 0 ? -kpis()!.costVariance : kpis()!.costVariance) }}
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Pending Change Orders</div>
+          <div class="kpi-value">{{ formatCurrency(kpis()!.pendingChangeOrdersAmount) }}</div>
+          <div class="kpi-change" [class]="kpis()!.pendingChangeOrdersAmount > 0 ? 'warning' : 'positive'">{{ kpis()!.openChangeOrders }} open</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div><h2 class="card-title">Change Orders</h2><p class="card-subtitle">Pending and approved project changes</p></div>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>Number</th><th>Description</th><th>Amount</th><th>Status</th><th>Requested By</th></tr></thead>
+            <tbody>
+              @if (changeOrders().length === 0) {
+                <tr><td colspan="5" class="text-secondary" style="text-align: center">No change orders</td></tr>
+              }
+              @for (co of changeOrders(); track co.id) {
+                <tr>
+                  <td class="font-mono">{{ co.number }}</td>
+                  <td>{{ co.description }}</td>
+                  <td>{{ formatCurrency(co.amount) }}</td>
+                  <td><span class="badge" [class]="changeOrderStatusClass(co.status)">{{ co.status }}</span></td>
+                  <td>{{ co.requestedBy ?? '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    @if (activeTab() === 'RFIs') {
+      <div class="card">
+        <div class="card-header">
+          <div><h2 class="card-title">RFI Log</h2><p class="card-subtitle">Discipline, impact, and status</p></div>
+          <div class="toolbar-right">
+            <button type="button" class="btn btn-ghost btn-sm text-secondary" (click)="goTo('/rfis')">
+              <i class="icon icon-message-square" aria-hidden="true"></i> View all
+            </button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>Number</th><th>Subject</th><th>Discipline</th><th>Impact</th><th>Status</th><th>Due</th></tr></thead>
+            <tbody>
+              @if (rfis().length === 0) {
+                <tr><td colspan="6" class="text-secondary" style="text-align: center">No RFIs</td></tr>
+              }
+              @for (r of rfis(); track r.id) {
+                <tr>
+                  <td class="font-mono">{{ r.number }}</td>
+                  <td>{{ r.subject }}</td>
+                  <td>{{ r.discipline ?? '—' }}</td>
+                  <td>{{ r.impact ?? '—' }}</td>
+                  <td><span class="badge" [class]="rfiStatusClass(r.status)">{{ r.status }}</span></td>
+                  <td>{{ r.dueDate ? formatDate(r.dueDate) : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    @if (activeTab() === 'Submittals') {
+      <h2 class="section-title">Submittals</h2>
+      <p class="section-subtitle">Material and shop drawing submittals by specification section.</p>
+      <div class="card" style="margin-top: var(--space-lg)">
+        <div class="card-header">
+          <div><h2 class="card-title">Submittal Register</h2><p class="card-subtitle">Type, specification section, and approval status</p></div>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>Number</th><th>Title</th><th>Type</th><th>Discipline</th><th>Spec Section</th><th>Status</th></tr></thead>
+            <tbody>
+              @if (submittals().length === 0) {
+                <tr><td colspan="6" class="text-secondary" style="text-align: center">No submittals</td></tr>
+              }
+              @for (s of submittals(); track s.id) {
+                <tr>
+                  <td class="font-mono">{{ s.number }}</td>
+                  <td>{{ s.title }}</td>
+                  <td>{{ s.submittalType ?? '—' }}</td>
+                  <td>{{ s.discipline ?? '—' }}</td>
+                  <td>{{ s.specificationSection ?? '—' }}</td>
+                  <td><span class="badge" [class]="submittalStatusClass(s.status)">{{ s.status }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+</div>

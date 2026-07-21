@@ -1,0 +1,44 @@
+<div class="reports-page">
+  <header class="page-header">
+    <h1>Reports</h1>
+    <p>Historical trends, filters, and export-ready dashboards</p>
+  </header>
+
+  @if (loading()) {
+    <div class="loading-state" aria-live="polite">Loading reports…</div>
+  }
+  @if (error()) {
+    <div class="alert alert-error" role="alert">{{ error() }}</div>
+  }
+
+  @if (!loading() && !error()) {
+    <div class="reports-grid">
+      <div class="card chart-card">
+        <h2 class="card-title">Earned Value Trend</h2>
+        <ejs-chart
+          id="earned-value-chart"
+          [primaryXAxis]="evPrimaryXAxis"
+          [primaryYAxis]="evPrimaryYAxis"
+          [tooltip]="tooltip"
+          [legendSettings]="legendSettings"
+          height="360px"
+        >
+          <e-series-collection>
+            <e-series [dataSource]="evData()" xName="month" yName="bcws" name="Planned Value (BCWS)" type="Line" [width]="2"></e-series>
+            <e-series [dataSource]="evData()" xName="month" yName="bcwp" name="Earned Value (BCWP)" type="Line" [width]="2"></e-series>
+            <e-series [dataSource]="evData()" xName="month" yName="acwp" name="Actual Cost (ACWP)" type="Line" [width]="2"></e-series>
+          </e-series-collection>
+        </ejs-chart>
+      </div>
+
+      <div class="card chart-card">
+        <h2 class="card-title">Cost Variance by Cost Code</h2>
+        <ejs-chart id="cost-variance-chart" [primaryXAxis]="cvPrimaryXAxis" [primaryYAxis]="cvPrimaryYAxis" [tooltip]="tooltip" height="360px">
+          <e-series-collection>
+            <e-series [dataSource]="cvData()" xName="costCode" yName="variance" name="Variance %" type="Column"></e-series>
+          </e-series-collection>
+        </ejs-chart>
+      </div>
+    </div>
+  }
+</div>

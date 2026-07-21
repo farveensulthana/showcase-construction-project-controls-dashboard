@@ -1,0 +1,44 @@
+@page "/site-map"
+@layout MainLayout
+@using Syncfusion.Blazor.Maps
+
+<PageTitle>Site Map</PageTitle>
+
+<div class="site-map-page">
+    <header class="page-header">
+        <h1>Site Map</h1>
+        <p>Project and site locations with construction activity markers</p>
+    </header>
+
+    @if (_loading)
+    {
+        <div class="loading-state" aria-live="polite">Loading site map…</div>
+    }
+    @if (_error is not null)
+    {
+        <div class="alert alert-error" role="alert">@_error</div>
+    }
+
+    @if (!_loading && _error is null)
+    {
+        <div class="card map-card">
+            <SfMaps ID="site-map">
+                <MapsTitleSettings Text="Project Locations">
+                    <MapsTitleTextStyle Size="18px"></MapsTitleTextStyle>
+                </MapsTitleSettings>
+                <MapsZoomSettings Enable="true" ZoomFactor="4" MouseWheelZoom="true"></MapsZoomSettings>
+                <MapsAreaSettings Background="#e5e7eb"></MapsAreaSettings>
+                <MapsLayers>
+                    <MapsLayer TValue="SiteMap.MarkerPoint" UrlTemplate="https://tile.openstreetmap.org/level/tileX/tileY.png">
+                        <MapsMarkerSettings>
+                            <MapsMarker TValue="SiteMap.MarkerPoint" DataSource="@_locations" Visible="true" Shape="MarkerType.Circle" Height="20" Width="20" Fill="#1976d2"
+                                        LatitudeValuePath="Latitude" LongitudeValuePath="Longitude">
+                                <MapsMarkerTooltipSettings Visible="true" ValuePath="Name"></MapsMarkerTooltipSettings>
+                            </MapsMarker>
+                        </MapsMarkerSettings>
+                    </MapsLayer>
+                </MapsLayers>
+            </SfMaps>
+        </div>
+    }
+</div>

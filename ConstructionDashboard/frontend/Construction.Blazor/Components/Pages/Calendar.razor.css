@@ -1,0 +1,16 @@
+.calendar-page {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+.schedule-card {
+  padding: 0;
+  min-height: 650px;
+  display: flex;
+  overflow: hidden;
+}
+
+.schedule-card > .e-control.e-schedule {
+  width: 100%;
+  flex: 1 1 auto;
+}

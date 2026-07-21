@@ -1,0 +1,37 @@
+@page "/calendar"
+@layout MainLayout
+@using Syncfusion.Blazor.Schedule
+
+<PageTitle>Calendar</PageTitle>
+
+<div class="calendar-page">
+    <header class="page-header">
+        <h1>Calendar</h1>
+        <p>Milestones, inspections, meetings, and scheduled site activities</p>
+    </header>
+
+    @if (_loading)
+    {
+        <div class="loading-state" aria-live="polite">Loading calendar…</div>
+    }
+    @if (_error is not null)
+    {
+        <div class="alert alert-error" role="alert">@_error</div>
+    }
+
+    @if (!_loading && _error is null)
+    {
+        <div class="card schedule-card">
+            <SfSchedule TValue="SchedulerEvent" Height="650px" SelectedDate="_selectedDate" CurrentView="View.Month">
+                <ScheduleEventSettings DataSource="@_events"></ScheduleEventSettings>
+                <ScheduleViews>
+                    <ScheduleView Option="View.Day"></ScheduleView>
+                    <ScheduleView Option="View.Week"></ScheduleView>
+                    <ScheduleView Option="View.WorkWeek"></ScheduleView>
+                    <ScheduleView Option="View.Month"></ScheduleView>
+                    <ScheduleView Option="View.Agenda"></ScheduleView>
+                </ScheduleViews>
+            </SfSchedule>
+        </div>
+    }
+</div>

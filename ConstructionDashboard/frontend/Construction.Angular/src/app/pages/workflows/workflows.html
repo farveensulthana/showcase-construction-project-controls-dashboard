@@ -1,0 +1,17 @@
+<div class="workflows-page">
+  <header class="page-header">
+    <h1>Workflows</h1>
+    <p>Approval and delivery workflow visualization</p>
+  </header>
+  <div class="card workflow-diagram-card">
+    <ejs-diagram
+      id="workflow-diagram"
+      width="100%"
+      height="500px"
+      [nodes]="nodes"
+      [connectors]="connectors"
+      [getNodeDefaults]="getNodeDefaults"
+      [snapSettings]="snapSettings"
+    ></ejs-diagram>
+  </div>
+</div>

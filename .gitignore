@@ -1,0 +1,18 @@
+# Node / frontend (each app's own .gitignore covers its dist/.vite/.angular build output)
+node_modules/
+
+# .NET build outputs
+**/bin/
+**/obj/
+**/publish/
+*.csproj.user
+
+# IDE / OS
+.vs/
+.vscode/
+.DS_Store
+Thumbs.db
+
+
+# APM dependencies
+apm_modules/
