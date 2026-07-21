@@ -1,6 +1,6 @@
 # Construction Project Controls Dashboard
 
-Construction Project Controls Dashboard is a cross-framework enterprise showcase application built with a shared ASP.NET Core Web API and three Syncfusion-powered clients: Angular, React, and Blazor.
+Construction Project Controls Dashboard is a cross-framework enterprise showcase application built with a shared ASP.NET Core Web API and three Syncfusion-powered clients: Angular, React, and Blazor. 
 
 The application delivers a centralized command center for construction project controls — integrating project management, scheduling, cost control, and field reporting data into one real-time view. Project managers, planners, and stakeholders can track progress, monitor budgets, assess risks, and identify deviations from planned baselines across a portfolio of projects. It also shows how the same enterprise experience can be delivered consistently across different frontend stacks by using Syncfusion UI components.
 
