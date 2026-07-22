@@ -44,25 +44,7 @@ public class ApiClient(IHttpClientFactory httpClientFactory)
         return result ?? throw new InvalidOperationException($"Empty response from {url}");
     }
 
-    public async Task<T> PostJsonAsync<T>(string path, object? body = null)
-    {
-        var response = await _http.PostAsJsonAsync(path, body ?? new { }, JsonOptions);
-        response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<T>(JsonOptions);
-        return result ?? throw new InvalidOperationException($"Empty response from {path}");
-    }
-
-    public async Task<T> PutJsonAsync<T>(string path, object? body = null)
-    {
-        var response = await _http.PutAsJsonAsync(path, body ?? new { }, JsonOptions);
-        response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<T>(JsonOptions);
-        return result ?? throw new InvalidOperationException($"Empty response from {path}");
-    }
-
-    public async Task DeleteAsync(string path)
-    {
-        var response = await _http.DeleteAsync(path);
-        response.EnsureSuccessStatusCode();
-    }
+    // NOTE: This showcase exposes a read-only API surface. PostJsonAsync / PutJsonAsync /
+    // DeleteAsync are intentionally not provided here to avoid anonymous write/delete vectors
+    // on the demo database. See README.
 }

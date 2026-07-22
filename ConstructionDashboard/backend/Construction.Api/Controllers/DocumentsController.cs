@@ -23,18 +23,5 @@ public class DocumentsController : ControllerBase
         return doc is null ? NotFound() : Ok(doc);
     }
 
-    [HttpPost]
-    public async Task<ActionResult<DocumentDto>> CreateDocument([FromBody] DocumentCreateDto dto, CancellationToken ct)
-        => Ok(await _service.CreateDocumentAsync(dto, ct));
-
-    [HttpPut("{id:int}")]
-    public async Task<ActionResult<DocumentDto>> UpdateDocument(int id, [FromBody] DocumentUpdateDto dto, CancellationToken ct)
-    {
-        var doc = await _service.UpdateDocumentAsync(id, dto, ct);
-        return doc is null ? NotFound() : Ok(doc);
-    }
-
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteDocument(int id, CancellationToken ct)
-        => await _service.DeleteDocumentAsync(id, ct) ? NoContent() : NotFound();
+    // NOTE: Read-only public surface — see BudgetsController for rationale.
 }

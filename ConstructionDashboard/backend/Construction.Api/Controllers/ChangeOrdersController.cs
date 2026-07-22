@@ -23,18 +23,5 @@ public class ChangeOrdersController : ControllerBase
         return co is null ? NotFound() : Ok(co);
     }
 
-    [HttpPost]
-    public async Task<ActionResult<ChangeOrderDto>> CreateChangeOrder([FromBody] ChangeOrderCreateDto dto, CancellationToken ct)
-        => Ok(await _service.CreateChangeOrderAsync(dto, ct));
-
-    [HttpPut("{id:int}")]
-    public async Task<ActionResult<ChangeOrderDto>> UpdateChangeOrder(int id, [FromBody] ChangeOrderUpdateDto dto, CancellationToken ct)
-    {
-        var co = await _service.UpdateChangeOrderAsync(id, dto, ct);
-        return co is null ? NotFound() : Ok(co);
-    }
-
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteChangeOrder(int id, CancellationToken ct)
-        => await _service.DeleteChangeOrderAsync(id, ct) ? NoContent() : NotFound();
+    // NOTE: Read-only public surface — see BudgetsController for rationale.
 }

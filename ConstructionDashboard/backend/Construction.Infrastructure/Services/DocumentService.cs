@@ -35,40 +35,6 @@ public class DocumentService : IDocumentService
         return entity is null ? null : MapDocument(entity);
     }
 
-    public async Task<DocumentDto> CreateDocumentAsync(DocumentCreateDto dto, CancellationToken ct = default)
-    {
-        var entity = new Document
-        {
-            ProjectId = dto.ProjectId,
-            FileId = dto.FileId,
-            FileName = dto.FileName,
-            FileType = dto.FileType,
-            FileSize = dto.FileSize,
-            DocumentType = dto.DocumentType,
-            Description = dto.Description,
-            UploadedBy = dto.UploadedBy,
-            CreatedDate = DateTime.UtcNow
-        };
-        return await Task.FromResult(MapDocument(entity));
-    }
-
-    public async Task<DocumentDto?> UpdateDocumentAsync(int id, DocumentUpdateDto dto, CancellationToken ct = default)
-    {
-        var entity = await _repo.GetByIdAsync(id, ct);
-        if (entity is null) return null;
-        entity.FileName = dto.FileName;
-        entity.DocumentType = dto.DocumentType;
-        entity.Description = dto.Description;
-        entity.ModifiedDate = DateTime.UtcNow;
-        return await Task.FromResult(MapDocument(entity));
-    }
-
-    public async Task<bool> DeleteDocumentAsync(int id, CancellationToken ct = default)
-    {
-        var entity = await _repo.GetByIdAsync(id, ct);
-        return entity is not null;
-    }
-
     private static IQueryable<Document> ApplyFilter(IQueryable<Document> source, string? filter)
     {
         if (string.IsNullOrWhiteSpace(filter)) return source;

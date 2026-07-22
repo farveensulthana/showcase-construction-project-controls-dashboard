@@ -35,37 +35,6 @@ public class BudgetService : IBudgetService
         return entity is null ? null : MapBudget(entity);
     }
 
-    public async Task<BudgetDto> CreateBudgetAsync(BudgetCreateDto dto, CancellationToken ct = default)
-    {
-        var entity = new Budget
-        {
-            ProjectId = dto.ProjectId,
-            Category = dto.Category,
-            Description = dto.Description,
-            AllocatedAmount = dto.AllocatedAmount,
-            CreatedDate = DateTime.UtcNow
-        };
-        return await Task.FromResult(MapBudget(entity));
-    }
-
-    public async Task<BudgetDto?> UpdateBudgetAsync(int id, BudgetUpdateDto dto, CancellationToken ct = default)
-    {
-        var entity = await _repo.GetByIdAsync(id, ct);
-        if (entity is null) return null;
-        entity.Category = dto.Category;
-        entity.Description = dto.Description;
-        entity.AllocatedAmount = dto.AllocatedAmount;
-        entity.SpentAmount = dto.SpentAmount;
-        entity.ModifiedDate = DateTime.UtcNow;
-        return await Task.FromResult(MapBudget(entity));
-    }
-
-    public async Task<bool> DeleteBudgetAsync(int id, CancellationToken ct = default)
-    {
-        var entity = await _repo.GetByIdAsync(id, ct);
-        return entity is not null;
-    }
-
     private static IQueryable<Budget> ApplyFilter(IQueryable<Budget> source, string? filter)
     {
         if (string.IsNullOrWhiteSpace(filter)) return source;

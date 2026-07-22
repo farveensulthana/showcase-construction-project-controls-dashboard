@@ -84,7 +84,25 @@ dotnet run --project backend/Construction.Api/Construction.Api.csproj
 
 The API runs at `http://localhost:5228` (and `https://localhost:7070`), with Swagger UI at the root URL.
 
-The development API applies EF Core migrations and refreshes the deterministic showcase data when it starts.
+The API exposes a **read-only** surface (GET endpoints only). Create / Update / Delete actions are intentionally omitted from the controllers and service layer so the public showcase cannot be used to insert, update, or delete data — this keeps the demo dataset stable and avoids anonymous write/delete vectors (data tampering, denial of service). The client apps' "New ..."/"Save ..." modals mutate local view state only; nothing is sent to the backend.
+
+Database migrations and deterministic showcase seeding are **explicit, opt-in** steps — they do not run automatically on app start. To apply pending EF Core migrations and (re)seed the showcase data for one run, set `RUN_SEED=true`:
+
+```bash
+# Windows (PowerShell)
+$env:RUN_SEED="true"; dotnet run --project backend/Construction.Api/Construction.Api.csproj
+# Linux / macOS
+RUN_SEED=true dotnet run --project backend/Construction.Api/Construction.Api.csproj
+```
+
+Set the PostgreSQL connection string via [user secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) or an environment variable rather than committing a real password:
+
+```bash
+cd backend/Construction.Api
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Database=ConstructionProjectControls;Username=postgres;Password=<your-password>"
+```
+
+The API also applies a per-IP rate limit (100 requests / 60 seconds) and caps `pageSize` at 200 to bound the read surface against trivial DoS.
 
 ### 2. Start a frontend
 

@@ -4,6 +4,7 @@ using Construction.Infrastructure.Repositories;
 using Construction.Infrastructure.Services;
 using Construction.Infrastructure.Seed;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,18 +60,30 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Per-IP rate limiter to mitigate trivial DoS on the public read-only showcase API. The
+// pageSize cap lives in QueryParametersDto (max 200). Together these bound the read surface.
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        // Fall back to a single shared bucket if the remote IP cannot be determined (e.g. tests).
+        var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "shared";
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 100,
+            Window = TimeSpan.FromSeconds(60),
+            QueueLimit = 0,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        });
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    // Apply migrations and seed database in Development
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<ConstructionDbContext>();
-    await db.Database.MigrateAsync();
-    var forceSeed = bool.TryParse(builder.Configuration["ForceSeed"], out var fs) && fs;
-    await DatabaseSeeder.SeedAsync(db, forceSeed);
-
     app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI(options =>
@@ -80,6 +93,22 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+// Database migrate + seed is an EXPLICIT, opt-in operation — it never runs automatically on
+// app start. Set RUN_SEED=true (env var or the ForceSeed config key) for one start to apply
+// pending EF Core migrations and (re)seed the deterministic showcase data. This keeps the
+// default published behaviour read-only/idempotent and prevents the hosted demo from mutating
+// its own schema or data on every boot. See README for usage.
+if (bool.TryParse(builder.Configuration["RUN_SEED"], out var runSeed) && runSeed
+    || bool.TryParse(builder.Configuration["ForceSeed"], out var forceSeed) && forceSeed)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ConstructionDbContext>();
+    await db.Database.MigrateAsync();
+    var seedForceFully = bool.TryParse(builder.Configuration["ForceSeed"], out var fs) && fs;
+    await DatabaseSeeder.SeedAsync(db, seedForceFully);
+}
+
+app.UseRateLimiter();
 app.UseCors("AllowLocalhost");
 
 app.UseAuthorization();

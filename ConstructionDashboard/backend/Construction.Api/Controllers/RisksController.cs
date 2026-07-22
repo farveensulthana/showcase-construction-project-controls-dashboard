@@ -23,24 +23,6 @@ public class RisksController : ControllerBase
         return risk is null ? NotFound() : Ok(risk);
     }
 
-    [HttpPost]
-    public async Task<ActionResult<RiskDto>> CreateRisk([FromBody] RiskCreateDto dto, CancellationToken ct)
-    {
-        var created = await _service.CreateRiskAsync(dto, ct);
-        return CreatedAtAction(nameof(GetRisk), new { id = created.Id }, created);
-    }
-
-    [HttpPut("{id:int}")]
-    public async Task<ActionResult<RiskDto>> UpdateRisk(int id, [FromBody] RiskUpdateDto dto, CancellationToken ct)
-    {
-        var updated = await _service.UpdateRiskAsync(id, dto, ct);
-        return updated is null ? NotFound() : Ok(updated);
-    }
-
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteRisk(int id, CancellationToken ct)
-        => await _service.DeleteRiskAsync(id, ct) ? NoContent() : NotFound();
-
     [HttpGet("kpis")]
     public async Task<ActionResult<RiskKpisDto>> GetKpis(CancellationToken ct)
         => Ok(await _service.GetKpisAsync(ct));
@@ -48,4 +30,6 @@ public class RisksController : ControllerBase
     [HttpGet("matrix")]
     public async Task<ActionResult<RiskMatrixDto>> GetMatrix(CancellationToken ct)
         => Ok(await _service.GetMatrixAsync(ct));
+
+    // NOTE: Read-only public surface — see BudgetsController for rationale.
 }

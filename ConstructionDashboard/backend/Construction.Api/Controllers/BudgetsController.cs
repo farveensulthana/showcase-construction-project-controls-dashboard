@@ -23,18 +23,8 @@ public class BudgetsController : ControllerBase
         return budget is null ? NotFound() : Ok(budget);
     }
 
-    [HttpPost]
-    public async Task<ActionResult<BudgetDto>> CreateBudget([FromBody] BudgetCreateDto dto, CancellationToken ct)
-        => Ok(await _service.CreateBudgetAsync(dto, ct));
-
-    [HttpPut("{id:int}")]
-    public async Task<ActionResult<BudgetDto>> UpdateBudget(int id, [FromBody] BudgetUpdateDto dto, CancellationToken ct)
-    {
-        var budget = await _service.UpdateBudgetAsync(id, dto, ct);
-        return budget is null ? NotFound() : Ok(budget);
-    }
-
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteBudget(int id, CancellationToken ct)
-        => await _service.DeleteBudgetAsync(id, ct) ? NoContent() : NotFound();
+    // NOTE: This showcase exposes a read-only API surface for public GitHub publication.
+    // Create / Update / Delete actions are intentionally omitted to avoid anonymous
+    // write/delete vectors (data tampering, DoS) on the demo database. The service-layer
+    // write methods are likewise not part of the public surface. See README for details.
 }

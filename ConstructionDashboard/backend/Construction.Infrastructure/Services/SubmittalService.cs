@@ -35,40 +35,6 @@ public class SubmittalService : ISubmittalService
         return entity is null ? null : MapSubmittal(entity);
     }
 
-    public async Task<SubmittalDto> CreateSubmittalAsync(SubmittalCreateDto dto, CancellationToken ct = default)
-    {
-        var entity = new Submittal
-        {
-            ProjectId = dto.ProjectId,
-            Number = dto.Number,
-            Description = dto.Description,
-            Status = dto.Status,
-            SubmittedBy = dto.SubmittedBy,
-            SubmittedDate = dto.SubmittedDate,
-            CreatedDate = DateTime.UtcNow
-        };
-        return await Task.FromResult(MapSubmittal(entity));
-    }
-
-    public async Task<SubmittalDto?> UpdateSubmittalAsync(int id, SubmittalUpdateDto dto, CancellationToken ct = default)
-    {
-        var entity = await _repo.GetByIdAsync(id, ct);
-        if (entity is null) return null;
-        entity.Description = dto.Description;
-        entity.Status = dto.Status;
-        entity.ReviewedBy = dto.ReviewedBy;
-        entity.ReviewDate = dto.ReviewDate;
-        entity.Comments = dto.Comments;
-        entity.ModifiedDate = DateTime.UtcNow;
-        return await Task.FromResult(MapSubmittal(entity));
-    }
-
-    public async Task<bool> DeleteSubmittalAsync(int id, CancellationToken ct = default)
-    {
-        var entity = await _repo.GetByIdAsync(id, ct);
-        return entity is not null;
-    }
-
     public async Task<IReadOnlyList<SubmittalSummaryDto>> GetSubmittalsByProjectAsync(int projectId, CancellationToken ct = default)
     {
         var items = await _repo.Query()

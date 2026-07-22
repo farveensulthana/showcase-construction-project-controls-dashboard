@@ -696,8 +696,6 @@ function RfisTab({ rfis }: { rfis: RfiSummaryDto[] }): ReactElement {
 function SubmittalsTab({ submittals }: { submittals: SubmittalSummaryDto[] }): ReactElement {
   return (
     <>
-      <h2 className="section-title">Submittals</h2>
-      <p className="section-subtitle">Material and shop drawing submittals by specification section.</p>
       <div className="card" style={{ marginTop: 'var(--space-lg)' }}>
         <div className="card-header">
           <div>

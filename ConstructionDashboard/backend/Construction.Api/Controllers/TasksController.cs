@@ -23,21 +23,5 @@ public class TasksController : ControllerBase
         return task is null ? NotFound() : Ok(task);
     }
 
-    [HttpPost]
-    public async Task<ActionResult<TaskDto>> CreateTask([FromBody] TaskCreateDto dto, CancellationToken ct)
-    {
-        var created = await _service.CreateTaskAsync(dto, ct);
-        return CreatedAtAction(nameof(GetTask), new { id = created.Id }, created);
-    }
-
-    [HttpPut("{id:int}")]
-    public async Task<ActionResult<TaskDto>> UpdateTask(int id, [FromBody] TaskUpdateDto dto, CancellationToken ct)
-    {
-        var updated = await _service.UpdateTaskAsync(id, dto, ct);
-        return updated is null ? NotFound() : Ok(updated);
-    }
-
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteTask(int id, CancellationToken ct)
-        => await _service.DeleteTaskAsync(id, ct) ? NoContent() : NotFound();
+    // NOTE: Read-only public surface — see BudgetsController for rationale.
 }

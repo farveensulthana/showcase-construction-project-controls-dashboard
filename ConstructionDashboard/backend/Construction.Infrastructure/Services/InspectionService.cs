@@ -35,42 +35,6 @@ public class InspectionService : IInspectionService
         return entity is null ? null : MapInspection(entity);
     }
 
-    public async Task<InspectionDto> CreateInspectionAsync(InspectionCreateDto dto, CancellationToken ct = default)
-    {
-        var entity = new Inspection
-        {
-            ProjectId = dto.ProjectId,
-            LocationId = dto.LocationId,
-            Type = dto.Type,
-            ScheduledDate = dto.ScheduledDate,
-            Status = dto.Status,
-            Inspector = dto.Inspector,
-            CreatedDate = DateTime.UtcNow
-        };
-        return await Task.FromResult(MapInspection(entity));
-    }
-
-    public async Task<InspectionDto?> UpdateInspectionAsync(int id, InspectionUpdateDto dto, CancellationToken ct = default)
-    {
-        var entity = await _repo.GetByIdAsync(id, ct);
-        if (entity is null) return null;
-        entity.Type = dto.Type;
-        entity.ScheduledDate = dto.ScheduledDate;
-        entity.CompletedDate = dto.CompletedDate;
-        entity.Status = dto.Status;
-        entity.Inspector = dto.Inspector;
-        entity.Notes = dto.Notes;
-        entity.Findings = dto.Findings;
-        entity.ModifiedDate = DateTime.UtcNow;
-        return await Task.FromResult(MapInspection(entity));
-    }
-
-    public async Task<bool> DeleteInspectionAsync(int id, CancellationToken ct = default)
-    {
-        var entity = await _repo.GetByIdAsync(id, ct);
-        return entity is not null;
-    }
-
     private static IQueryable<Inspection> ApplyFilter(IQueryable<Inspection> source, string? filter)
     {
         if (string.IsNullOrWhiteSpace(filter)) return source;

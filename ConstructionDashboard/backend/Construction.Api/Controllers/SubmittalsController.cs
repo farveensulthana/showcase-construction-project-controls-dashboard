@@ -23,18 +23,5 @@ public class SubmittalsController : ControllerBase
         return submittal is null ? NotFound() : Ok(submittal);
     }
 
-    [HttpPost]
-    public async Task<ActionResult<SubmittalDto>> CreateSubmittal([FromBody] SubmittalCreateDto dto, CancellationToken ct)
-        => Ok(await _service.CreateSubmittalAsync(dto, ct));
-
-    [HttpPut("{id:int}")]
-    public async Task<ActionResult<SubmittalDto>> UpdateSubmittal(int id, [FromBody] SubmittalUpdateDto dto, CancellationToken ct)
-    {
-        var submittal = await _service.UpdateSubmittalAsync(id, dto, ct);
-        return submittal is null ? NotFound() : Ok(submittal);
-    }
-
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteSubmittal(int id, CancellationToken ct)
-        => await _service.DeleteSubmittalAsync(id, ct) ? NoContent() : NotFound();
+    // NOTE: Read-only public surface — see BudgetsController for rationale.
 }

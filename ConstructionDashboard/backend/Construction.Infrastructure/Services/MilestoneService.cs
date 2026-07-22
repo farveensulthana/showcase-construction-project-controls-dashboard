@@ -50,52 +50,6 @@ public class MilestoneService : IMilestoneService
         return MapMilestone(entity, project?.Code);
     }
 
-    public async Task<MilestoneDto> CreateMilestoneAsync(MilestoneCreateDto dto, CancellationToken ct = default)
-    {
-        var project = await _projects.GetByIdAsync(dto.ProjectId, ct)
-            ?? throw new ArgumentException("Project not found", nameof(dto));
-
-        var entity = new Milestone
-        {
-            ProjectId = dto.ProjectId,
-            Name = dto.Title,
-            Description = dto.Description,
-            Date = dto.PlannedDate,
-            Status = dto.Status,
-            CreatedDate = DateTime.UtcNow
-        };
-
-        await _milestones.AddAsync(entity, ct);
-        await _milestones.SaveChangesAsync(ct);
-        return MapMilestone(entity, project.Code);
-    }
-
-    public async Task<MilestoneDto?> UpdateMilestoneAsync(int id, MilestoneUpdateDto dto, CancellationToken ct = default)
-    {
-        var entity = await _milestones.Query().FirstOrDefaultAsync(m => m.Id == id, ct);
-        if (entity is null) return null;
-
-        entity.Name = dto.Title;
-        entity.Description = dto.Description;
-        entity.Date = dto.PlannedDate;
-        entity.Status = dto.Status;
-        entity.ModifiedDate = DateTime.UtcNow;
-
-        _milestones.Update(entity);
-        await _milestones.SaveChangesAsync(ct);
-        var project = await _projects.GetByIdAsync(entity.ProjectId, ct);
-        return MapMilestone(entity, project?.Code);
-    }
-
-    public async Task<bool> DeleteMilestoneAsync(int id, CancellationToken ct = default)
-    {
-        var entity = await _milestones.Query().FirstOrDefaultAsync(m => m.Id == id, ct);
-        if (entity is null) return false;
-        _milestones.Delete(entity);
-        await _milestones.SaveChangesAsync(ct);
-        return true;
-    }
-
     public async Task<IReadOnlyList<MilestoneDto>> GetMilestonesByProjectAsync(int projectId, int days, CancellationToken ct = default)
     {
         var cutoff = DateTime.UtcNow.AddDays(days);

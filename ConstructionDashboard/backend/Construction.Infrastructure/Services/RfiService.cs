@@ -35,44 +35,6 @@ public class RfiService : IRfiService
         return entity is null ? null : MapRfi(entity);
     }
 
-    public async Task<RfiDto> CreateRfiAsync(RfiCreateDto dto, CancellationToken ct = default)
-    {
-        var entity = new RFI
-        {
-            ProjectId = dto.ProjectId,
-            Number = dto.Number,
-            Subject = dto.Subject,
-            Description = dto.Description,
-            Status = dto.Status,
-            SubmittedBy = dto.SubmittedBy,
-            SubmittedDate = dto.SubmittedDate,
-            AssignedTo = dto.AssignedTo,
-            CreatedDate = DateTime.UtcNow
-        };
-        // Save via DbContext is not available in this layer directly; returning mapped mock for now.
-        return await Task.FromResult(MapRfi(entity));
-    }
-
-    public async Task<RfiDto?> UpdateRfiAsync(int id, RfiUpdateDto dto, CancellationToken ct = default)
-    {
-        var entity = await _repo.GetByIdAsync(id, ct);
-        if (entity is null) return null;
-        entity.Subject = dto.Subject;
-        entity.Description = dto.Description;
-        entity.Status = dto.Status;
-        entity.AssignedTo = dto.AssignedTo;
-        entity.ResponseDate = dto.ResponseDate;
-        entity.Response = dto.Response;
-        entity.ModifiedDate = DateTime.UtcNow;
-        return await Task.FromResult(MapRfi(entity));
-    }
-
-    public async Task<bool> DeleteRfiAsync(int id, CancellationToken ct = default)
-    {
-        var entity = await _repo.GetByIdAsync(id, ct);
-        return entity is not null;
-    }
-
     public async Task<IReadOnlyList<RfiSummaryDto>> GetRfisByProjectAsync(int projectId, CancellationToken ct = default)
     {
         var items = await _repo.Query()

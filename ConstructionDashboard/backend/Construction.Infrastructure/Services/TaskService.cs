@@ -38,58 +38,6 @@ public class TaskService : ITaskService
         return entity is null ? null : MapTask(entity);
     }
 
-    public async Task<TaskDto> CreateTaskAsync(TaskCreateDto dto, CancellationToken ct = default)
-    {
-        var entity = new ProjectTask
-        {
-            ProjectId = dto.ProjectId,
-            Name = dto.Name,
-            Description = dto.Description,
-            StartDate = dto.StartDate,
-            EndDate = dto.EndDate,
-            Status = dto.Status,
-            Progress = dto.Progress,
-            AssignedTo = dto.AssignedTo,
-            ParentTaskId = dto.ParentTaskId,
-            Dependencies = dto.Dependencies,
-            CreatedDate = DateTime.UtcNow
-        };
-
-        await _tasks.AddAsync(entity, ct);
-        await _tasks.SaveChangesAsync(ct);
-        return MapTask(entity);
-    }
-
-    public async Task<TaskDto?> UpdateTaskAsync(int id, TaskUpdateDto dto, CancellationToken ct = default)
-    {
-        var entity = await _tasks.Query().FirstOrDefaultAsync(t => t.Id == id, ct);
-        if (entity is null) return null;
-
-        entity.Name = dto.Name;
-        entity.Description = dto.Description;
-        entity.StartDate = dto.StartDate;
-        entity.EndDate = dto.EndDate;
-        entity.Status = dto.Status;
-        entity.Progress = dto.Progress;
-        entity.AssignedTo = dto.AssignedTo;
-        entity.ParentTaskId = dto.ParentTaskId;
-        entity.Dependencies = dto.Dependencies;
-        entity.ModifiedDate = DateTime.UtcNow;
-
-        _tasks.Update(entity);
-        await _tasks.SaveChangesAsync(ct);
-        return MapTask(entity);
-    }
-
-    public async Task<bool> DeleteTaskAsync(int id, CancellationToken ct = default)
-    {
-        var entity = await _tasks.Query().FirstOrDefaultAsync(t => t.Id == id, ct);
-        if (entity is null) return false;
-        _tasks.Delete(entity);
-        await _tasks.SaveChangesAsync(ct);
-        return true;
-    }
-
     private static IQueryable<ProjectTask> ApplyFilter(IQueryable<ProjectTask> source, string? filter)
     {
         if (string.IsNullOrWhiteSpace(filter)) return source;

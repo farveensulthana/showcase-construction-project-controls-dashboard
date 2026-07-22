@@ -23,18 +23,5 @@ public class InspectionsController : ControllerBase
         return inspection is null ? NotFound() : Ok(inspection);
     }
 
-    [HttpPost]
-    public async Task<ActionResult<InspectionDto>> CreateInspection([FromBody] InspectionCreateDto dto, CancellationToken ct)
-        => Ok(await _service.CreateInspectionAsync(dto, ct));
-
-    [HttpPut("{id:int}")]
-    public async Task<ActionResult<InspectionDto>> UpdateInspection(int id, [FromBody] InspectionUpdateDto dto, CancellationToken ct)
-    {
-        var inspection = await _service.UpdateInspectionAsync(id, dto, ct);
-        return inspection is null ? NotFound() : Ok(inspection);
-    }
-
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteInspection(int id, CancellationToken ct)
-        => await _service.DeleteInspectionAsync(id, ct) ? NoContent() : NotFound();
+    // NOTE: Read-only public surface — see BudgetsController for rationale.
 }

@@ -35,45 +35,6 @@ public class ChangeOrderService : IChangeOrderService
         return entity is null ? null : MapChangeOrder(entity);
     }
 
-    public async Task<ChangeOrderDto> CreateChangeOrderAsync(ChangeOrderCreateDto dto, CancellationToken ct = default)
-    {
-        var entity = new ChangeOrder
-        {
-            ProjectId = dto.ProjectId,
-            Number = dto.Number,
-            Description = dto.Description,
-            Amount = dto.Amount,
-            Status = dto.Status,
-            RequestedBy = dto.RequestedBy,
-            RequestDate = dto.RequestDate,
-            Justification = dto.Justification,
-            ImpactDays = dto.ImpactDays,
-            CreatedDate = DateTime.UtcNow
-        };
-        return await Task.FromResult(MapChangeOrder(entity));
-    }
-
-    public async Task<ChangeOrderDto?> UpdateChangeOrderAsync(int id, ChangeOrderUpdateDto dto, CancellationToken ct = default)
-    {
-        var entity = await _repo.GetByIdAsync(id, ct);
-        if (entity is null) return null;
-        entity.Description = dto.Description;
-        entity.Amount = dto.Amount;
-        entity.Status = dto.Status;
-        entity.ApprovedBy = dto.ApprovedBy;
-        entity.ApprovalDate = dto.ApprovalDate;
-        entity.Justification = dto.Justification;
-        entity.ImpactDays = dto.ImpactDays;
-        entity.ModifiedDate = DateTime.UtcNow;
-        return await Task.FromResult(MapChangeOrder(entity));
-    }
-
-    public async Task<bool> DeleteChangeOrderAsync(int id, CancellationToken ct = default)
-    {
-        var entity = await _repo.GetByIdAsync(id, ct);
-        return entity is not null;
-    }
-
     private static IQueryable<ChangeOrder> ApplyFilter(IQueryable<ChangeOrder> source, string? filter)
     {
         if (string.IsNullOrWhiteSpace(filter)) return source;

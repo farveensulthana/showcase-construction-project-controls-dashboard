@@ -10,16 +10,8 @@ public class RisksService(ApiClient api)
     public Task<RiskKpisDto> GetKpisAsync() =>
         api.GetJsonAsync<RiskKpisDto>("risks/kpis");
 
-    public Task<RiskDto> UpdateAsync(int id, RiskUpdateDto changes) =>
-        api.PutJsonAsync<RiskDto>($"risks/{id}", changes);
-
-    // Kept for API-surface parity with the React/Angular apps; intentionally NOT called by the
-    // Risks page's "New Risk" modal, which stays local-state-only (demo data, no persistence).
-    public Task<RiskDto> CreateAsync(RiskCreateDto risk) =>
-        api.PostJsonAsync<RiskDto>("risks", risk);
-
-    public Task DeleteAsync(int id) =>
-        api.DeleteAsync($"risks/{id}");
+    // NOTE: This showcase exposes a read-only API surface. Update/Create/Delete are intentionally
+    // not wired here to avoid anonymous write/delete vectors on the demo database. See README.
 
     public Task<RiskMatrixDto> GetMatrixAsync() =>
         api.GetJsonAsync<RiskMatrixDto>("risks/matrix");
