@@ -12,6 +12,7 @@ import type {
   TaskDto,
   GanttTask,
   RiskSummaryDto,
+  RiskUpdateClientDto,
   RiskKpisDto,
   RiskMatrixDto,
   RiskMatrixCellViewModel,
@@ -24,7 +25,7 @@ import type {
   ProjectMilestoneDto,
   QueryParameters,
 } from '../types';
-import { getJson } from './client';
+import { getJson, postJson, putJson, deleteJson } from './client';
 
 export const reportsApi = {
   getPortfolioKpis: () => getJson<PortfolioKpisDto>('reports/portfolio-kpis'),
@@ -91,8 +92,11 @@ export const risksApi = {
   getRisks: (params?: QueryParameters) =>
     getJson<{ data: RiskSummaryDto[]; totalCount: number; page: number; pageSize: number; totalPages: number }>('risks', params),
   getKpis: () => getJson<RiskKpisDto>('risks/kpis'),
-  // NOTE: This showcase exposes a read-only API surface. Create/Update/Delete are intentionally
-  // not wired here to avoid anonymous write/delete vectors on the demo database. See README.
+  update: (id: number, changes: RiskUpdateClientDto) =>
+    putJson<RiskSummaryDto>(`risks/${id}`, changes),
+  create: (risk: Omit<RiskSummaryDto, 'id' | 'projectCode' | 'impactDisplay'>) =>
+    postJson<RiskSummaryDto>('risks', risk),
+  delete: (id: number) => deleteJson<void>(`risks/${id}`),
 };
 
 export const schedulerApi = {

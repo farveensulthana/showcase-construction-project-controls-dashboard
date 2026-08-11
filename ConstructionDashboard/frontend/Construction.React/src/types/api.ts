@@ -262,6 +262,7 @@ export interface RecentDocumentDto {
 export interface ChangeOrderSummaryDto {
   id: number;
   projectId: number;
+  projectCode: string;
   number: string;
   description: string;
   amount: number;

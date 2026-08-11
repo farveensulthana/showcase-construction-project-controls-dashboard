@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
+import { GridComponent, ColumnsDirective, ColumnDirective, Inject, Resize } from '@syncfusion/ej2-react-grids';
 import {
   PdfViewerComponent,
   Toolbar,
@@ -14,7 +15,6 @@ import {
   TextSearch,
   Inject as PdfViewerInject,
 } from '@syncfusion/ej2-react-pdfviewer';
-import { onActivateKey } from '../utils/a11y';
 import { format } from '../utils/date';
 import { formatCurrency } from '../utils/format';
 import { projectsApi } from '../api/reports';
@@ -31,6 +31,7 @@ import type {
   HealthStatus,
   TaskStatus,
 } from '../types';
+import type { ShellOutletContext } from '../layout/Shell';
 import './ProjectDetailPage.css';
 
 // Demo documents don't have real per-file content in the sample data set, so every
@@ -96,6 +97,7 @@ function formatPercent(n: number): string {
 
 export function ProjectDetailPage(): ReactElement {
   const navigate = useNavigate();
+  const { setTopbarHeading } = useOutletContext<ShellOutletContext>();
   const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<ProjectDetailDto | null>(null);
   const [kpis, setKpis] = useState<ProjectKpisDto | null>(null);
@@ -166,29 +168,41 @@ export function ProjectDetailPage(): ReactElement {
 
   const tabs: DetailTab[] = useMemo(() => ['Overview', 'Schedule', 'Cost', 'RFIs', 'Submittals'], []);
 
+  // Push only the Back button + breadcrumb into the topbar (Projects / code).
+  // The project name and subtitle stay in the page content as a slim header.
+  // Cleared by the Shell on route change.
+  useEffect(() => {
+    if (!project) {
+      setTopbarHeading(null);
+      return;
+    }
+    setTopbarHeading(
+      <div className="topbar-breadcrumb">
+        <button
+          type="button"
+          className="btn btn-ghost btn-icon btn-sm"
+          onClick={() => navigate('/projects')}
+          aria-label="Back to projects"
+        >
+          <i className="icon icon-arrow-left" aria-hidden="true" />
+        </button>
+        <span>Projects</span>
+        <span aria-hidden="true">/</span>
+        <span className="font-mono">{project.code}</span>
+      </div>
+    );
+  }, [project, navigate, setTopbarHeading]);
+
   return (
     <div className="project-detail-page">
       <LoadingErrorState loading={loading} error={error} />
 
       {!loading && !error && project && kpis && (
         <>
-          <div className="page-header">
-            <div className="breadcrumb">
-              <button
-                type="button"
-                className="btn btn-ghost btn-icon btn-sm"
-                onClick={() => navigate('/projects')}
-                aria-label="Back to projects"
-              >
-                <i className="icon icon-arrow-left" aria-hidden="true" />
-              </button>
-              <span>Projects</span>
-              <span>/</span>
-              <span className="font-mono">{project.code}</span>
-            </div>
+          <header className="project-title">
             <h1>{project.name}</h1>
-            <p>{headerSubtitle}</p>
-          </div>
+            {headerSubtitle && <p>{headerSubtitle}</p>}
+          </header>
 
           <div className="tabs" role="tablist" aria-label="Project detail tabs">
             {tabs.map((tab) => {
@@ -237,8 +251,10 @@ interface OverviewTabProps {
 }
 
 function OverviewTab({ project, kpis, milestones, risks, documents }: OverviewTabProps): ReactElement {
-  const navigate = useNavigate();
+  //const navigate = useNavigate();
   const [previewDocument, setPreviewDocument] = useState<RecentDocumentDto | null>(null);
+  const overviewMilestonesGridRef = useRef<GridComponent>(null);
+  const overviewDocumentsGridRef = useRef<GridComponent>(null);
   return (
     <>
       <div className="kpi-grid">
@@ -273,13 +289,7 @@ function OverviewTab({ project, kpis, milestones, risks, documents }: OverviewTa
             {kpis.scheduleVariance >= 0 ? 'Ahead of schedule' : 'Behind schedule'}
           </div>
         </div>
-        <div
-          className="kpi-card is-clickable"
-          role="button"
-          tabIndex={0}
-          onClick={() => navigate('/rfis')}
-          onKeyDown={onActivateKey(() => navigate('/rfis'))}
-        >
+        <div className="kpi-card">
           <div className="kpi-label">Open RFIs</div>
           <div className="kpi-value">{kpis.openRfis}</div>
           <div className={`kpi-change ${kpis.overdueRfis > 0 ? 'warning' : 'positive'}`}>
@@ -306,44 +316,47 @@ function OverviewTab({ project, kpis, milestones, risks, documents }: OverviewTa
       </div>
 
       <div className="panel-grid">
-        <div className="card">
+        <div className="card grid-card">
           <div className="card-header">
             <div>
               <h2 className="card-title">Upcoming Milestones</h2>
               <p className="card-subtitle">Next 30 days</p>
             </div>
           </div>
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Milestone</th>
-                  <th>Planned Date</th>
-                  <th>Status</th>
-                  <th>Owner</th>
-                </tr>
-              </thead>
-              <tbody>
-                {milestones.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="text-secondary" style={{ textAlign: 'center' }}>No upcoming milestones</td>
-                  </tr>
+          <GridComponent
+            ref={overviewMilestonesGridRef}
+            dataSource={milestones}
+            allowResizing={true}
+            width="100%"
+            gridLines="Horizontal"
+          >
+            <ColumnsDirective>
+              <ColumnDirective
+                field="title"
+                headerText="Milestone"
+                template={(m: ProjectMilestoneDto) => (
+                  <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {m.title}
+                  </span>
                 )}
-                {milestones.map((m) => (
-                  <tr key={m.id}>
-                    <td>{m.title}</td>
-                    <td>{format(m.plannedDate)}</td>
-                    <td>
-                      <span className={`badge ${milestoneStatusBadgeClass[m.status]}`}>
-                        {milestoneStatusLabel[m.status]}
-                      </span>
-                    </td>
-                    <td>{m.owner ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              />
+              <ColumnDirective
+                field="plannedDate"
+                headerText="Date"
+                width="100"
+                template={(m: ProjectMilestoneDto) => <span className="cell-clamp-2">{format(m.plannedDate)}</span>}
+              />
+              <ColumnDirective
+                field="status"
+                headerText="Status"
+                width="110"
+                template={(m: ProjectMilestoneDto) => (
+                  <span className={`badge ${milestoneStatusBadgeClass[m.status]}`}>{milestoneStatusLabel[m.status]}</span>
+                )}
+              />
+            </ColumnsDirective>
+            <Inject services={[Resize]} />
+          </GridComponent>
         </div>
 
         <div className="card">
@@ -373,58 +386,60 @@ function OverviewTab({ project, kpis, milestones, risks, documents }: OverviewTa
         </div>
       </div>
 
-      <div className="card">
+      <div className="card grid-card">
         <div className="card-header">
           <div>
             <h2 className="card-title">Document Workflow</h2>
             <p className="card-subtitle">Last 30 days · {project.code}</p>
           </div>
-          <div className="toolbar-right">
-            <button type="button" className="btn btn-ghost btn-sm text-secondary" onClick={() => navigate('/documents')}>
-              <i className="icon icon-file-text" aria-hidden="true" /> View documents
-            </button>
-            <button type="button" className="btn btn-ghost btn-sm text-secondary" onClick={() => navigate('/rfis')}>
-              <i className="icon icon-message-square" aria-hidden="true" /> View RFIs
-            </button>
-          </div>
         </div>
-        <div className="table-container document-table">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Document</th>
-                <th>Type</th>
-                <th>Revision</th>
-                <th>Submitted</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="text-secondary" style={{ textAlign: 'center' }}>No recent documents</td>
-                </tr>
+        <GridComponent
+          ref={overviewDocumentsGridRef}
+          dataSource={documents}
+          allowResizing={true}
+          width="100%"
+          gridLines="Horizontal"
+          rowSelected={(args) => { if (args.data) setPreviewDocument(args.data as RecentDocumentDto); }}
+        >
+          <ColumnsDirective>
+            <ColumnDirective
+              field="title"
+              headerText="Document"
+              template={(d: RecentDocumentDto) => (
+                <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {d.title}
+                </span>
               )}
-              {documents.map((d) => (
-                <tr
-                  key={d.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setPreviewDocument(d)}
-                  onKeyDown={onActivateKey(() => setPreviewDocument(d))}
-                >
-                  <td>{d.title}</td>
-                  <td>{d.type}</td>
-                  <td className="font-mono">{d.revision ?? '—'}</td>
-                  <td>{format(d.submittedDate)}</td>
-                  <td>
-                    <span className={`badge ${documentStatusClass(d.status)}`}>{d.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            />
+            <ColumnDirective
+              field="type"
+              headerText="Type"
+              width="130"
+              template={(d: RecentDocumentDto) => <span className="cell-clamp-2">{d.type}</span>}
+            />
+            <ColumnDirective
+              field="revision"
+              headerText="Revision"
+              width="90"
+              template={(d: RecentDocumentDto) => <span className="font-mono cell-clamp-2">{d.revision ?? '—'}</span>}
+            />
+            <ColumnDirective
+              field="submittedDate"
+              headerText="Submitted"
+              width="120"
+              template={(d: RecentDocumentDto) => <span className="cell-clamp-2">{format(d.submittedDate)}</span>}
+            />
+            <ColumnDirective
+              field="status"
+              headerText="Status"
+              width="130"
+              template={(d: RecentDocumentDto) => (
+                <span className={`badge ${documentStatusClass(d.status)}`}>{d.status}</span>
+              )}
+            />
+          </ColumnsDirective>
+          <Inject services={[Resize]} />
+        </GridComponent>
       </div>
 
       <div className="card" style={{ marginTop: 'var(--space-xl)' }}>
@@ -519,52 +534,66 @@ interface ScheduleTabProps {
 }
 
 function ScheduleTab({ milestones }: ScheduleTabProps): ReactElement {
+  const gridRef = useRef<GridComponent>(null);
   return (
-    <>
-      <h2 className="section-title">Schedule</h2>
-      <p className="section-subtitle">Key milestones and planned dates for the project.</p>
-      <div className="table-container" style={{ marginTop: 'var(--space-lg)' }}>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Milestone</th>
-              <th>Description</th>
-              <th>Planned Date</th>
-              <th>Status</th>
-              <th>Owner</th>
-            </tr>
-          </thead>
-          <tbody>
-            {milestones.length === 0 && (
-              <tr>
-                <td colSpan={5} className="text-secondary" style={{ textAlign: 'center' }}>No milestones</td>
-              </tr>
+    <div className="grid-card" style={{ marginTop: 'var(--space-lg)' }}>
+      <GridComponent
+        ref={gridRef}
+        dataSource={milestones}
+        allowResizing={true}
+        width="100%"
+        gridLines="Horizontal"
+      >
+        <ColumnsDirective>
+          <ColumnDirective
+            field="title"
+            headerText="Milestone"
+            template={(m: ProjectMilestoneDto) => (
+              <span style={{ fontWeight: 600, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {m.title}
+              </span>
             )}
-            {milestones.map((m) => (
-              <tr key={m.id}>
-                <td style={{ fontWeight: 600 }}>{m.title}</td>
-                <td className="text-secondary truncate" style={{ maxWidth: 320 }}>{m.description ?? '—'}</td>
-                <td>{format(m.plannedDate)}</td>
-                <td>
-                  <span className={`badge ${milestoneStatusBadgeClass[m.status]}`}>
-                    {milestoneStatusLabel[m.status]}
-                  </span>
-                </td>
-                <td>{m.owner ?? '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
+          />
+          <ColumnDirective
+            field="description"
+            headerText="Description"
+            template={(m: ProjectMilestoneDto) => (
+              <span className="text-secondary cell-clamp-2">
+                {m.description ?? '—'}
+              </span>
+            )}
+          />
+          <ColumnDirective
+            field="plannedDate"
+            headerText="Planned Date"
+            width="130"
+            template={(m: ProjectMilestoneDto) => <span className="cell-clamp-2">{format(m.plannedDate)}</span>}
+          />
+          <ColumnDirective
+            field="status"
+            headerText="Status"
+            width="130"
+            template={(m: ProjectMilestoneDto) => (
+              <span className={`badge ${milestoneStatusBadgeClass[m.status]}`}>{milestoneStatusLabel[m.status]}</span>
+            )}
+          />
+          <ColumnDirective
+            field="owner"
+            headerText="Owner"
+            width="160"
+            template={(m: ProjectMilestoneDto) => <span className="cell-clamp-2">{m.owner ?? '—'}</span>}
+          />
+        </ColumnsDirective>
+        <Inject services={[Resize]} />
+      </GridComponent>
+    </div>
   );
 }
 
 function CostTab({ kpis, changeOrders }: { kpis: ProjectKpisDto; changeOrders: ChangeOrderSummaryDto[] }): ReactElement {
+  const costGridRef = useRef<GridComponent>(null);
   return (
     <>
-      <h2 className="section-title">Cost Control</h2>
-      <p className="section-subtitle">Budget status, cost variance, and pending change orders.</p>
       <div className="kpi-grid" style={{ marginTop: 'var(--space-lg)' }}>
         <div className="kpi-card">
           <div className="kpi-label">Budget</div>
@@ -596,148 +625,181 @@ function CostTab({ kpis, changeOrders }: { kpis: ProjectKpisDto; changeOrders: C
         </div>
       </div>
 
-      <div className="card">
+      <div className="card grid-card">
         <div className="card-header">
           <div>
             <h2 className="card-title">Change Orders</h2>
             <p className="card-subtitle">Pending and approved project changes</p>
           </div>
         </div>
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Number</th>
-                <th>Description</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Requested By</th>
-              </tr>
-            </thead>
-            <tbody>
-              {changeOrders.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="text-secondary" style={{ textAlign: 'center' }}>No change orders</td>
-                </tr>
+        <GridComponent
+          ref={costGridRef}
+          dataSource={changeOrders}
+          allowResizing={true}
+          width="100%"
+          gridLines="Horizontal"
+        >
+          <ColumnsDirective>
+            <ColumnDirective
+              field="number"
+              headerText="CO #"
+              width="90"
+              template={(co: ChangeOrderSummaryDto) => <span className="font-mono cell-clamp-2">{co.number}</span>}
+            />
+            <ColumnDirective
+              field="description"
+              headerText="Description"
+              template={(co: ChangeOrderSummaryDto) => (
+                <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {co.description}
+                </span>
               )}
-              {changeOrders.map((co) => (
-                <tr key={co.id}>
-                  <td className="font-mono">{co.number}</td>
-                  <td>{co.description}</td>
-                  <td>{formatCurrency(co.amount)}</td>
-                  <td>
-                    <span className={`badge ${changeOrderStatusClass(co.status)}`}>{co.status}</span>
-                  </td>
-                  <td>{co.requestedBy ?? '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            />
+            <ColumnDirective
+              field="amount"
+              headerText="Amount"
+              width="130"
+              template={(co: ChangeOrderSummaryDto) => <span className="cell-clamp-2" style={{ fontWeight: 600 }}>{formatCurrency(co.amount)}</span>}
+            />
+            <ColumnDirective
+              field="status"
+              headerText="Status"
+              width="130"
+              template={(co: ChangeOrderSummaryDto) => (
+                <span className={`badge ${changeOrderStatusClass(co.status)}`}>{co.status}</span>
+              )}
+            />
+            <ColumnDirective
+              field="requestedBy"
+              headerText="Requested By"
+              width="160"
+              template={(co: ChangeOrderSummaryDto) => <span className="cell-clamp-2">{co.requestedBy ?? '—'}</span>}
+            />
+          </ColumnsDirective>
+          <Inject services={[Resize]} />
+        </GridComponent>
       </div>
     </>
   );
 }
 
 function RfisTab({ rfis }: { rfis: RfiSummaryDto[] }): ReactElement {
-  const navigate = useNavigate();
+  const gridRef = useRef<GridComponent>(null);
   return (
-    <>
-      <div className="card">
-        <div className="card-header">
-          <div>
-            <h2 className="card-title">RFI Log</h2>
-            <p className="card-subtitle">Discipline, impact, and status</p>
-          </div>
-          <div className="toolbar-right">
-            <button type="button" className="btn btn-ghost btn-sm text-secondary" onClick={() => navigate('/rfis')}>
-              <i className="icon icon-message-square" aria-hidden="true" /> View all
-            </button>
-          </div>
-        </div>
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Number</th>
-                <th>Subject</th>
-                <th>Discipline</th>
-                <th>Impact</th>
-                <th>Status</th>
-                <th>Due</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rfis.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-secondary" style={{ textAlign: 'center' }}>No RFIs</td>
-                </tr>
-              )}
-              {rfis.map((r) => (
-                <tr key={r.id}>
-                  <td className="font-mono">{r.number}</td>
-                  <td>{r.subject}</td>
-                  <td>{r.discipline ?? '—'}</td>
-                  <td>{r.impact ?? '—'}</td>
-                  <td>
-                    <span className={`badge ${rfiStatusClass(r.status)}`}>{r.status}</span>
-                  </td>
-                  <td>{r.dueDate ? format(r.dueDate) : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </>
+    <div className="grid-card" style={{ marginTop: 'var(--space-lg)' }}>
+      <GridComponent
+        ref={gridRef}
+        dataSource={rfis}
+        allowResizing={true}
+        width="100%"
+        gridLines="Horizontal"
+      >
+        <ColumnsDirective>
+          <ColumnDirective
+            field="number"
+            headerText="RFI #"
+            width="90"
+            template={(r: RfiSummaryDto) => <span className="font-mono cell-clamp-2">{r.number}</span>}
+          />
+          <ColumnDirective
+            field="subject"
+            headerText="Subject"
+            template={(r: RfiSummaryDto) => (
+              <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {r.subject}
+              </span>
+            )}
+          />
+          <ColumnDirective
+            field="discipline"
+            headerText="Discipline"
+            width="120"
+            template={(r: RfiSummaryDto) => <span className="cell-clamp-2">{r.discipline ?? '—'}</span>}
+          />
+          <ColumnDirective
+            field="impact"
+            headerText="Impact"
+            width="100"
+            template={(r: RfiSummaryDto) => <span className="cell-clamp-2">{r.impact ?? '—'}</span>}
+          />
+          <ColumnDirective
+            field="status"
+            headerText="Status"
+            width="110"
+            template={(r: RfiSummaryDto) => (
+              <span className={`badge ${rfiStatusClass(r.status)}`}>{r.status}</span>
+            )}
+          />
+          <ColumnDirective
+            field="dueDate"
+            headerText="Due"
+            width="110"
+            template={(r: RfiSummaryDto) => <span className="cell-clamp-2">{r.dueDate ? format(r.dueDate) : '—'}</span>}
+          />
+        </ColumnsDirective>
+        <Inject services={[Resize]} />
+      </GridComponent>
+    </div>
   );
 }
 
 function SubmittalsTab({ submittals }: { submittals: SubmittalSummaryDto[] }): ReactElement {
+  const gridRef = useRef<GridComponent>(null);
   return (
-    <>
-      <div className="card" style={{ marginTop: 'var(--space-lg)' }}>
-        <div className="card-header">
-          <div>
-            <h2 className="card-title">Submittal Register</h2>
-            <p className="card-subtitle">Type, specification section, and approval status</p>
-          </div>
-        </div>
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Number</th>
-                <th>Title</th>
-                <th>Type</th>
-                <th>Discipline</th>
-                <th>Spec Section</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {submittals.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-secondary" style={{ textAlign: 'center' }}>No submittals</td>
-                </tr>
-              )}
-              {submittals.map((s) => (
-                <tr key={s.id}>
-                  <td className="font-mono">{s.number}</td>
-                  <td>{s.title}</td>
-                  <td>{s.submittalType ?? '—'}</td>
-                  <td>{s.discipline ?? '—'}</td>
-                  <td>{s.specificationSection ?? '—'}</td>
-                  <td>
-                    <span className={`badge ${submittalStatusClass(s.status)}`}>{s.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </>
+    <div className="grid-card" style={{ marginTop: 'var(--space-lg)' }}>
+      <GridComponent
+        ref={gridRef}
+        dataSource={submittals}
+        allowResizing={true}
+        width="100%"
+        gridLines="Horizontal"
+      >
+        <ColumnsDirective>
+          <ColumnDirective
+            field="number"
+            headerText="Sub #"
+            width="90"
+            template={(s: SubmittalSummaryDto) => <span className="font-mono cell-clamp-2">{s.number}</span>}
+          />
+          <ColumnDirective
+            field="title"
+            headerText="Title"
+            template={(s: SubmittalSummaryDto) => (
+              <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {s.title}
+              </span>
+            )}
+          />
+          <ColumnDirective
+            field="submittalType"
+            headerText="Type"
+            width="120"
+            template={(s: SubmittalSummaryDto) => <span className="cell-clamp-2">{s.submittalType ?? '—'}</span>}
+          />
+          <ColumnDirective
+            field="discipline"
+            headerText="Discipline"
+            width="120"
+            template={(s: SubmittalSummaryDto) => <span className="cell-clamp-2">{s.discipline ?? '—'}</span>}
+          />
+          <ColumnDirective
+            field="specificationSection"
+            headerText="Spec Section"
+            width="120"
+            template={(s: SubmittalSummaryDto) => <span className="cell-clamp-2">{s.specificationSection ?? '—'}</span>}
+          />
+          <ColumnDirective
+            field="status"
+            headerText="Status"
+            width="130"
+            template={(s: SubmittalSummaryDto) => (
+              <span className={`badge ${submittalStatusClass(s.status)}`}>{s.status}</span>
+            )}
+          />
+        </ColumnsDirective>
+        <Inject services={[Resize]} />
+      </GridComponent>
+    </div>
   );
 }
 

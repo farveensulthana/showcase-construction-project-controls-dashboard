@@ -1,5 +1,400 @@
 @import './tokens.css';
 
+/* ═══════════════════════════════════════════════════════════════════════
+   Syncfusion Grid — zero-import custom styling
+   No Material3 CSS is imported. The grid is styled entirely from the
+   app's own design tokens so it blends with the existing UI and causes
+   zero side-effects on navigation, popups, or any other component.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Grid shell ──────────────────────────────────────────────────────── */
+.e-grid {
+  border: var(--table-border);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-sans);
+  font-size: var(--text-small-size);
+  line-height: var(--text-small-line);
+  color: var(--table-text);
+  background-color: var(--table-row-bg);
+  overflow: hidden;
+  width: 100% !important;
+}
+
+/* ── Hide auto-generated grid title / caption ───────────────────────── */
+/* Syncfusion injects an accessible <caption> like "name_0_header_table" */
+/* and may render a title bar. Hide both completely.                      */
+.e-grid .e-gridtitlebar,
+.e-grid .e-toolbar,
+.e-grid .e-toolbar-items {
+  display: none !important;
+}
+
+.e-grid table caption,
+.e-grid caption {
+  display: none !important;
+}
+
+/* ── Column header row ───────────────────────────────────────────────── */
+.e-grid .e-gridheader {
+  background-color: var(--table-header-bg);
+  border-bottom: var(--table-border);
+}
+
+.e-grid .e-gridheader table,
+.e-grid .e-columnheader {
+  background-color: var(--table-header-bg);
+}
+
+.e-grid .e-headercell,
+.e-grid .e-detailheadercell {
+  background-color: var(--table-header-bg);
+  color: var(--table-header-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-caption-weight);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: left !important;
+  padding: var(--space-sm) var(--space-lg);
+  border-bottom: none;
+  border-right: none;
+  white-space: normal;
+  word-break: break-word;
+  vertical-align: middle;
+}
+
+.e-grid .e-headercell .e-headercelldiv {
+  color: var(--table-header-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption-size);
+  text-align: left !important;
+  padding: 0;
+  height: auto;
+  line-height: var(--text-small-line);
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Sort icon */
+.e-grid .e-headercell .e-sortfilterdiv,
+.e-grid .e-headercell .e-ascending::before,
+.e-grid .e-headercell .e-descending::before {
+  color: var(--color-muted);
+}
+
+/* ── Content / rows ──────────────────────────────────────────────────── */
+.e-grid .e-gridcontent,
+.e-grid .e-content {
+  background-color: var(--table-row-bg);
+}
+
+.e-grid .e-gridcontent table,
+.e-grid .e-content table {
+  min-width: 100%;
+  width: 100% !important;
+  table-layout: fixed;
+}
+
+.e-grid .e-gridheader table {
+  width: 100% !important;
+  table-layout: fixed;
+}
+
+.e-grid .e-rowcell,
+.e-grid .e-summarycell {
+  background-color: var(--table-row-bg);
+  color: var(--table-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-small-size);
+  line-height: var(--text-small-line);
+  text-align: left !important;
+  padding: var(--space-sm) var(--space-lg);
+  border-bottom: var(--table-border);
+  border-right: none;
+  border-top: none;
+  vertical-align: top;
+  /* default: clip long content with ellipsis on single line */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Columns that should wrap (e.g. title/description/subject) —
+   applied via Syncfusion customAttributes={{ class:'cell-wrap' }} */
+.e-grid .e-rowcell.cell-wrap {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  word-break: break-word;
+}
+
+.e-grid .e-clipboard {
+  cursor: default;
+  height: 1px;
+  left: -1000px;
+  overflow: hidden;
+  position: fixed;
+  resize: none;
+  top: -1000px;
+  width: 1px;
+}
+
+/* Columns whose values should wrap to a maximum of two lines, then ellipsis.
+   Applied via customAttributes={{ class:'cell-clamp-2' }} on the ColumnDirective
+   OR via the cell-clamp-2 class on an inline template span. */
+.e-grid .cell-clamp-2 {
+  white-space: normal !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  word-break: break-word;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+}
+
+/* Prevent Syncfusion clip tooltip (EllipsisWithTooltip / Clip) from
+   appearing as a popup on truncated cell hover, and strip any implicit
+   title attribute Syncfusion may add. */
+.e-grid .e-tooltip-wrap,
+.e-grid + .e-tooltip-wrap,
+.e-grid ~ .e-tooltip-wrap,
+.e-tooltip-wrap.e-grid-tooltip,
+.e-grid-tooltip,
+.e-grid .e-tooltipwrap {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Ensure no native browser tooltip on grid cells (title attribute) */
+.e-grid .e-rowcell[title],
+.e-grid .e-rowcell [title] {
+  pointer-events: auto;
+}
+
+/* Match header height when rows are taller due to wrapping */
+.e-grid .e-headercell {
+  vertical-align: middle;
+}
+
+/* Last row — no bottom border */
+.e-grid .e-row:last-child .e-rowcell {
+  border-bottom: none;
+}
+
+/* No zebra stripes */
+.e-grid .e-altrow .e-rowcell {
+  background-color: var(--table-row-bg);
+}
+
+/* Hover */
+.e-grid .e-row:hover .e-rowcell,
+.e-grid .e-row.e-altrow:hover .e-rowcell {
+  background-color: var(--table-row-bg-hover);
+  cursor: pointer;
+}
+
+/* Selected */
+.e-grid .e-row.e-selectionbackground .e-rowcell,
+.e-grid .e-active .e-rowcell {
+  background-color: var(--table-row-bg-selected);
+  color: var(--table-text);
+}
+
+/* Empty message */
+.e-grid .e-emptyrow td,
+.e-grid .e-emptyrow .e-rowcell {
+  background-color: var(--table-row-bg);
+  color: var(--color-muted);
+  text-align: center !important;
+  padding: var(--space-xl) var(--space-lg);
+  border-bottom: none;
+  font-size: var(--text-small-size);
+}
+
+/* ── Pager — horizontal inline layout ───────────────────────────────── */
+.e-grid .e-gridpager,
+.e-pager {
+  background-color: var(--table-header-bg);
+  border-top: var(--table-border);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  padding: var(--space-xs) var(--space-lg);
+  font-family: var(--font-sans);
+  font-size: var(--text-small-size);
+  color: var(--color-secondary);
+  /* Force horizontal row */
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0;
+}
+
+/* Every direct child of pager in a row */
+.e-pager > * {
+  display: inline-flex !important;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Mobile first/prev/next/last icons that also stack */
+.e-pager .e-mfirst,
+.e-pager .e-mprev,
+.e-pager .e-mnext,
+.e-pager .e-mlast {
+  display: none !important; /* hidden on desktop; avoid stacking */
+}
+
+.e-pager .e-pagercontainer {
+  background-color: transparent;
+  border: none;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 2px;
+  order: 2;
+}
+
+/* Syncfusion wraps each numeric page link in an anonymous <div> —
+   force those wrappers inline so numbers sit side-by-side, not stacked */
+.e-pager .e-pagercontainer > div {
+  display: inline-flex !important;
+  flex-shrink: 0;
+}
+
+/* Page info "1-20 of 120" pushed to the right */
+.e-pager .e-parentmsgbar {
+  margin-left: auto;
+  order: 3;
+  color: var(--color-secondary);
+  font-size: var(--text-small-size);
+  white-space: nowrap;
+}
+
+/* Each page number button */
+.e-pager .e-numericitem {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  color: var(--color-secondary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  cursor: pointer;
+  font-size: var(--text-small-size);
+  font-family: var(--font-sans);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.e-pager .e-numericitem:hover {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-primary);
+}
+
+.e-pager .e-numericitem.e-currentpage,
+.e-pager .e-numericitem.e-active {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+}
+
+/* Prev / Next / First / Last nav buttons */
+.e-pager .e-first,
+.e-pager .e-prev,
+.e-pager .e-next,
+.e-pager .e-last,
+.e-pager .e-pp,
+.e-pager .e-np {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  color: var(--color-secondary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.e-pager .e-first:hover,
+.e-pager .e-prev:hover,
+.e-pager .e-next:hover,
+.e-pager .e-last:hover {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-primary);
+}
+
+.e-pager .e-first.e-disable,
+.e-pager .e-prev.e-disable,
+.e-pager .e-next.e-disable,
+.e-pager .e-last.e-disable {
+  color: var(--color-muted);
+  cursor: default;
+  pointer-events: none;
+}
+
+.e-pager .e-icons {
+  color: inherit;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.e-pager .e-pagerconstant,
+.e-pager .e-pagerexternalmsg {
+  color: var(--color-muted);
+  font-size: var(--text-small-size);
+  display: none; /* hide "20 records per page" text, keep it clean */
+}
+
+/* ── Strip all Material box-shadows / outlines ───────────────────────── */
+.e-grid *,
+.e-grid *::before,
+.e-grid *::after {
+  box-shadow: none !important;
+}
+
+.e-grid table {
+  border-collapse: collapse;
+  min-width: 100%;
+}
+
+.e-grid .e-gridheader,
+.e-grid .e-gridcontent,
+.e-grid .e-gridpager {
+  border: none;
+  box-shadow: none;
+}
+
+/* Resize handle — invisible */
+.e-grid .e-rhandler {
+  border-right: none;
+}
+
+/* Remove all focus/selection borders and outlines on grid cells */
+.e-grid .e-row:focus-within .e-rowcell,
+.e-grid .e-focused .e-rowcell,
+.e-grid .e-rowcell.e-focused,
+.e-grid td.e-focused,
+.e-grid .e-row.e-selectionbackground .e-rowcell,
+.e-grid .e-active .e-rowcell {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
 /* Base reset and utilities — ported from .designs/shared/base.css */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -136,6 +531,35 @@ img {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+/* Card containing a Syncfusion Grid — opt-in via `grid-card` alongside
+   `card`. Applies one common fixed row height (--grid-row-max-height,
+   tokens.css) to every row so grids look consistent across the whole app,
+   and otherwise leaves the card as a normal auto-height block — it just
+   wraps snugly around its header + however many rows the grid has (like a
+   stack layout expanding to fit its children), rather than the grid being
+   forced to fill (or the card being forced to hold) any particular
+   height. */
+.grid-card .e-grid .e-row,
+.grid-card .e-grid .e-rowcell {
+  height: var(--grid-row-max-height);
+}
+
+.grid-card .e-grid .e-rowcell {
+  vertical-align: middle;
+}
+
+/* ej2 sets its own inline height on the scrollable content wrapper (sized
+   from its internal default row-height assumption, not our CSS), which is
+   what leaves blank space below the last row even though the rows
+   themselves render at --grid-row-max-height. Force it back to auto so the
+   wrapper just sizes to its actual (taller) row content. */
+.grid-card .e-grid .e-gridcontent,
+.grid-card .e-grid .e-content,
+.grid-card .e-grid .e-gridcontent table,
+.grid-card .e-grid .e-content table {
+  height: auto !important;
 }
 
 .card.is-hover:hover {
@@ -557,10 +981,12 @@ img {
   opacity: .5;
 }
 
-/* Tooltip — sm size per Design System/components/layout/tooltip spec */
+/* Tooltip — sm size per Design System/components/layout/tooltip spec.
+   `bottom` is set inline per data point so the tooltip sits just above the
+   top of the tallest (planned) bar in the group, instead of floating at the
+   top of the chart area. `left: 50%` centers it on the bar-group. */
 .chart-tooltip {
   position: absolute;
-  bottom: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
   background: var(--tooltip-bg);

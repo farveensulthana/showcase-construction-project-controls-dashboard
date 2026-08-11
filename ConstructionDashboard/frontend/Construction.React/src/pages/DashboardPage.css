@@ -35,5 +35,180 @@
 }
 
 .health-chart {
-  padding: var(--space-md) 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xl);
+  padding: var(--space-lg) 0;
+  flex-wrap: wrap;
+}
+
+.health-chart .donut {
+  flex-shrink: 0;
+}
+
+.health-legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* ── Cost Performance Trend — Syncfusion ChartComponent wrapper ────────
+   Reproduces the original hand-rolled .bar-chart look:
+   180px height (bars area) + 28px month-label strip beneath, a single
+   thin border at the bottom acting as the baseline, no left/right axes.
+   The ej2 chart sits transparently inside; we strip its surface chrome.
+
+   Width is driven from JS (useElementWidth + ResizeObserver → width prop),
+   but the wrapper itself must be width:100% / min-width:0 so the card's
+   own fl/grid width flows through and the measurement is correct at mount.
+   `min-width:0` is critical: without it, the chart element (a flex child)
+   would refuse to shrink below its intrinsic content size on a narrow
+   viewport, which is what caused the 600px-overflow clipping.          */
+.dashboard-page .dashboard-chart {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 208px; /* 180px bars + 28px axis row */
+  position: relative;
+}
+
+.dashboard-page .dashboard-chart .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  color: var(--color-muted);
+  font-size: var(--text-small-size);
+}
+
+.dashboard-page .dashboard-chart .e-control,
+.dashboard-page .dashboard-chart .e-chart,
+.dashboard-page .dashboard-chart .dashboard-cost-trend {
+  max-width: 100%;
+}
+
+/* Strip ej2 default chrome (no Material theme is imported anywhere in this
+   project) so the chart blends into the card like the old hand-rolled bar
+   chart did. Specificity is parent-scoped (0,2,0) so it beats any injected
+   ej2 style that lands on .e-chart only by source order. */
+.dashboard-page .dashboard-cost-trend.e-chart,
+.dashboard-page .dashboard-cost-trend .e-chart,
+.dashboard-page .dashboard-cost-trend {
+  background: transparent !important;
+  border: none !important;
+  font-family: var(--font-sans) !important;
+}
+
+.dashboard-page .dashboard-cost-trend .e-control-wrapper,
+.dashboard-page .dashboard-cost-trend .e-chart-wrap,
+.dashboard-page .dashboard-cost-trend .e-chartborder {
+  border: none !important;
+  background: transparent !important;
+}
+
+/* Chart surface — transparent so the card bg shows through in both themes */
+.dashboard-page .dashboard-cost-trend .e-chart-area,
+.dashboard-page .dashboard-cost-trend .e-series-container,
+.dashboard-page .dashboard-cost-trend .e-user-interaction {
+  background: transparent !important;
+}
+
+/* No box-shadows anywhere on the chart */
+.dashboard-page .dashboard-cost-trend *::before,
+.dashboard-page .dashboard-cost-trend *::after {
+  box-shadow: none !important;
+}
+
+/* Y-axis is hidden via props; sweep away any residual axis chrome */
+.dashboard-page .dashboard-cost-trend .e-axis-x,
+.dashboard-page .dashboard-cost-trend .e-axis-y {
+  border: none !important;
+}
+
+/* Remove ej2's default plot-area border (a dark <rect>/<path> drawn around
+   the series rendering area). Belt-and-suspenders for the inline
+   `border` / `chartArea.border` props: ej2 sometimes still draws an SVG
+   path with a non-zero stroke so we hide that path's stroke here.         */
+.dashboard-page .dashboard-cost-trend svg .e-chart-area-border,
+.dashboard-page .dashboard-cost-trend svg .e-chart-border,
+.dashboard-page .dashboard-cost-trend .e-chart-area > rect:first-child,
+.dashboard-page .dashboard-cost-trend .e-chart-border,
+.dashboard-page .dashboard-cost-trend [id$="_chartborder"],
+.dashboard-page .dashboard-cost-trend [id$="_chart_border"],
+.dashboard-page .dashboard-cost-trend [id$="_ChartArea_Border"],
+.dashboard-page .dashboard-cost-trend [id$="_ChartBorder"] {
+  stroke: transparent !important;
+  stroke-width: 0 !important;
+  fill: transparent !important;
+  display: none !important;
+}
+
+/* ── Projects by Health — Syncfusion AccumulationChart (doughnut) ────────
+   Mirrors the original .donut (140×140) with the .donut-hole overlay
+   (inset 22% → innerRadius ~56%, surface-elevated filled hole) layered on
+   top for the centred "24 / Projects" label. The doughnut itself renders
+   transparently; the slice palette comes from the project tokens.        */
+.dashboard-page .health-chart-donut {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+}
+
+.dashboard-page .dashboard-health-donut .e-control-wrapper,
+.dashboard-page .dashboard-health-donut .e-accumulationchart,
+.dashboard-page .dashboard-health-donut {
+  background: transparent !important;
+  border: none !important;
+  font-family: var(--font-sans) !important;
+}
+
+.dashboard-page .dashboard-health-donut .e-accumulationchart-area {
+  background: transparent !important;
+}
+
+/* The ej2 doughnut SVG renders 140×140; rescale to fill the wrapper so
+   the .donut-hole overlay (which is positioned absolute inset:22%) sits
+   exactly over the inner radius (innerRadius:56% ≈ 22% inset). */
+.dashboard-page .dashboard-health-donut {
+  width: 140px;
+  height: 140px;
+}
+.dashboard-page .dashboard-health-donut svg {
+  width: 140px !important;
+  height: 140px !important;
+  display: block;
+}
+
+/* Center hole overlay — restores the original hand-rolled look. Replicates
+   the global .donut-hole rule so the doughnut + label pair is identical to
+   the conic-gradient version. The global rule already styles .donut-hole
+   for descendants of .donut; we re-scope it to .health-chart-donut here so
+   the same look applies. */
+.dashboard-page .health-chart-donut .donut-hole {
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  background: var(--color-surface-elevated);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.dashboard-page .health-chart-donut .donut-hole span {
+  font-size: var(--text-h3-size);
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.dashboard-page .health-chart-donut .donut-hole small {
+  font-size: var(--text-caption-size);
+  color: var(--color-secondary);
 }

@@ -14,6 +14,15 @@ public class Submittal : BaseEntity
     [MaxLength(50)]
     public string Number { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Short, human-readable name of the submittal — the column shown in the UI's
+    /// Submittals table (the frontend <c>SubmittalSummaryDto.title</c> field).
+    /// Distinct from <see cref="Description"/>, which holds the longer narrative.
+    /// </summary>
+    [Required]
+    [MaxLength(300)]
+    public string Title { get; set; } = string.Empty;
+
     [Required]
     [MaxLength(500)]
     public string Description { get; set; } = string.Empty;

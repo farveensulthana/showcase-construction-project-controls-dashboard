@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { Shell } from './layout/Shell';
-import { CalendarPage, CostControlPage, DashboardPage, DocumentsPage, NotFoundPage, ProjectDetailPage, ProjectsPage, ReportsPage, RisksPage, SchedulePage, SiteMapPage, WorkflowsPage } from './pages';
+import { CostControlPage, DashboardPage, NotFoundPage, ProjectDetailPage, ProjectsPage, ReportsPage, RisksPage } from './pages';
 
 export const router = createBrowserRouter([
   {
@@ -10,13 +10,8 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: 'projects', element: <ProjectsPage /> },
       { path: 'projects/:id', element: <ProjectDetailPage /> },
-      { path: 'schedule', element: <SchedulePage /> },
       { path: 'cost-control', element: <CostControlPage /> },
       { path: 'risks', element: <RisksPage /> },
-      { path: 'site-map', element: <SiteMapPage /> },
-      { path: 'calendar', element: <CalendarPage /> },
-      { path: 'documents', element: <DocumentsPage /> },
-      { path: 'workflows', element: <WorkflowsPage /> },
       { path: 'reports', element: <ReportsPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

@@ -1,4 +1,4 @@
-@Construction.Api_HostAddress = http://localhost:5228
+@Construction.Api_HostAddress = https://localhost:5228
 
 GET {{Construction.Api_HostAddress}}/weatherforecast/
 Accept: application/json

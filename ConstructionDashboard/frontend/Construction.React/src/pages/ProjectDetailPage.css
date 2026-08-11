@@ -1,5 +1,10 @@
 .project-detail-page {
-  padding: var(--space-xl) 0;
+  /* Top padding is intentionally 0 — the shared .main-content padding
+     already provides the gap below the topbar, so the project title sits
+     flush with the rest of the page content (no extra gap above the name). */
+  padding: 0 0 var(--space-xl);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
 }
 
 .project-detail-page .detail-hero {
@@ -10,20 +15,14 @@
   margin-bottom: var(--space-xl);
 }
 
-.project-detail-page .page-header {
-  margin-bottom: var(--space-lg);
+/* Slim in-page project title (Back + breadcrumb live in the topbar).
+   Kept tight at the top so there is no gap between the topbar and the
+   project name. */
+.project-detail-page .project-title {
+  margin: 0 0 var(--space-md);
 }
 
-.project-detail-page .breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-sm);
-  font-size: var(--text-small-size);
-  color: var(--color-secondary);
-}
-
-.project-detail-page .page-header h1 {
+.project-detail-page .project-title h1 {
   margin: 0 0 var(--space-xs);
   font-size: var(--text-h2-size);
   font-weight: 700;
@@ -31,7 +30,7 @@
   color: var(--color-primary);
 }
 
-.project-detail-page .page-header p {
+.project-detail-page .project-title p {
   margin: 0;
   color: var(--color-secondary);
   font-size: var(--text-body-size);
@@ -82,14 +81,6 @@
   transition: box-shadow 0.15s ease;
 }
 
-.project-detail-page .kpi-card.is-clickable {
-  cursor: pointer;
-}
-
-.project-detail-page .kpi-card.is-clickable:hover {
-  box-shadow: var(--card-shadow-hover);
-}
-
 .project-detail-page .kpi-label {
   font-size: var(--text-small-size);
   font-weight: 500;
@@ -136,19 +127,6 @@
 .project-detail-page .progress-fill.is-success { background: var(--color-success); }
 .project-detail-page .progress-fill.is-warning { background: var(--color-warning); }
 .project-detail-page .progress-fill.is-error { background: var(--color-error); }
-
-.project-detail-page .section-title {
-  margin: 0 0 var(--space-xs);
-  font-size: var(--text-h4-size);
-  font-weight: 700;
-  color: var(--color-primary);
-}
-
-.project-detail-page .section-subtitle {
-  margin: 0;
-  font-size: var(--text-small-size);
-  color: var(--color-secondary);
-}
 
 .project-detail-page .panel-grid {
   display: grid;

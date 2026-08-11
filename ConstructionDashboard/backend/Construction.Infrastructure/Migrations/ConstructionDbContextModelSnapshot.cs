@@ -724,6 +724,11 @@ namespace Construction.Infrastructure.Migrations
                     b.Property<DateTime?>("SubmittedDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ProjectId");
@@ -731,6 +736,8 @@ namespace Construction.Infrastructure.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("SubmittedDate");
+
+                    b.HasIndex("Title");
 
                     b.HasIndex("ProjectId", "Number")
                         .IsUnique();

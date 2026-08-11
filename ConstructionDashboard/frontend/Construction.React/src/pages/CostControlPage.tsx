@@ -1,10 +1,10 @@
 import type { ReactElement } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { GridComponent, ColumnsDirective, ColumnDirective, Inject, Page, Resize } from '@syncfusion/ej2-react-grids';
 import { changeOrdersApi, reportsApi } from '../api/reports';
 import { Modal } from '../components/Modal';
-import { Pagination } from '../components/Pagination';
 import type { ChangeOrderSummaryDto, ChangeOrderStatus, CostKpisDto, CostPerformancePointDto, CostVarianceByCostCodeDto } from '../types';
-import { onActivateKey } from '../utils/a11y';
+import { useSearchParams } from 'react-router-dom';
 import { downloadCsv } from '../utils/csv';
 import { format as formatDate } from '../utils/date';
 import { formatCompactCurrency, formatCurrency } from '../utils/format';
@@ -80,10 +80,28 @@ export function CostControlPage(): ReactElement {
   const [trend, setTrend] = useState<CostPerformancePointDto[]>([]);
   const [variances, setVariances] = useState<CostVarianceByCostCodeDto[]>([]);
   const [changeOrders, setChangeOrders] = useState<ChangeOrderSummaryDto[]>([]);
-  const [changeOrderPage, setChangeOrderPage] = useState(1);
-  const changeOrderPageSize = 20;
   const [coSearch, setCoSearch] = useState('');
-  const [coStatus, setCoStatus] = useState<ChangeOrderStatus | 'All'>('UnderReview');
+  const coGridRef = useRef<GridComponent>(null);
+  // Change-order status filter is URL-driven (?coStatus=UnderReview) so the
+  // Dashboard's "Cost Variance" / "CPI" KPI cards can deep-link into a
+  // pre-filtered list of change orders that need review (the actionable CO
+  // state for an over-budget / sub-1.0 CPI project). Falls back to 'All' when
+  // the param is absent or invalid. The URL is the single source of truth —
+  // shareable and bookmarkable.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const coStatusParam = searchParams.get('coStatus');
+  const coStatus: ChangeOrderStatus | 'All' = (coStatusOptions as string[]).includes(coStatusParam ?? '')
+    ? (coStatusParam as ChangeOrderStatus | 'All')
+    : 'All';
+
+  function setCoStatusFilter(next: ChangeOrderStatus | 'All'): void {
+    setSearchParams((prev) => {
+      if (next === 'All') prev.delete('coStatus');
+      else prev.set('coStatus', next);
+      return prev;
+    }, { replace: true });
+  }
+
   const [coLoading, setCoLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -137,10 +155,6 @@ export function CostControlPage(): ReactElement {
     };
   }, []);
 
-  useEffect(() => {
-    setChangeOrderPage(1);
-  }, [coStatus, coSearch]);
-
   const trendScale = useMemo(() => maxTrendValue(trend), [trend]);
 
   const budgetDelta = useMemo(() => {
@@ -156,7 +170,7 @@ export function CostControlPage(): ReactElement {
         !q ||
         co.number.toLowerCase().includes(q) ||
         co.description.toLowerCase().includes(q) ||
-        String(co.projectId).toLowerCase().includes(q);
+        co.projectCode.toLowerCase().includes(q);
       return matchesStatus && matchesSearch;
     });
   }, [changeOrders, coStatus, coSearch]);
@@ -172,6 +186,7 @@ export function CostControlPage(): ReactElement {
     const draft: ChangeOrderSummaryDto = {
       id: nextId,
       projectId: Number(newCoDraft.projectId) || 0,
+      projectCode: newCoDraft.projectId.trim() || '—',
       number: `CO-${String(nextId).padStart(4, '0')}`,
       description: newCoDraft.description.trim(),
       amount: Number(newCoDraft.amount) || 0,
@@ -185,7 +200,7 @@ export function CostControlPage(): ReactElement {
     // Demo only: kept in local component state so it's visible in the UI immediately;
     // nothing is written back to the API.
     setChangeOrders((prev) => [draft, ...prev]);
-    setCoStatus('All');
+    setCoStatusFilter('All');
     setCoSearch('');
     setShowNewCoModal(false);
   }
@@ -195,7 +210,7 @@ export function CostControlPage(): ReactElement {
       'change-orders',
       [
         { header: 'CO #', value: (co) => co.number },
-        { header: 'Project ID', value: (co) => co.projectId },
+        { header: 'Project', value: (co) => co.projectCode },
         { header: 'Description', value: (co) => co.description },
         { header: 'Submitted', value: (co) => (co.requestDate ? formatDate(co.requestDate) : '') },
         { header: 'Amount', value: (co) => co.amount },
@@ -206,17 +221,8 @@ export function CostControlPage(): ReactElement {
     );
   }
 
-  const pagedChangeOrders = useMemo(() => {
-    const startIndex = (changeOrderPage - 1) * changeOrderPageSize;
-    return filteredChangeOrders.slice(startIndex, startIndex + changeOrderPageSize);
-  }, [filteredChangeOrders, changeOrderPage]);
-
   return (
     <div className="cost-control-page">
-      <header className="page-header">
-        <h1>Cost Control</h1>
-        <p>Track budgets, committed spend, forecasts, and change orders.</p>
-      </header>
 
       {loading && <div className="loading-state" aria-live="polite">Loading cost control…</div>}
       {error && <div className="alert alert-error" role="alert">{error}</div>}
@@ -306,7 +312,7 @@ export function CostControlPage(): ReactElement {
             </div>
           </div>
 
-          <div className="card change-order-card">
+          <div className="card change-order-card grid-card">
             <div className="card-header">
               <div>
                 <h2 className="card-title">Pending Change Orders</h2>
@@ -333,7 +339,8 @@ export function CostControlPage(): ReactElement {
                 <select
                   className="select"
                   value={coStatus}
-                  onChange={(e) => setCoStatus(e.target.value as ChangeOrderStatus | 'All')}
+                  onChange={(e) => setCoStatusFilter(e.target.value as ChangeOrderStatus | 'All')}
+                  aria-label="Filter change orders by status"
                   style={{ minWidth: 160 }}
                 >
                   {coStatusOptions.map((s) => (
@@ -351,55 +358,61 @@ export function CostControlPage(): ReactElement {
             {coLoading && <div className="loading-state" aria-live="polite">Loading change orders…</div>}
             {!coLoading && (
               <>
-            <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>CO #</th>
-                    <th>Project ID</th>
-                    <th>Description</th>
-                    <th>Submitted</th>
-                    <th>Amount</th>
-                    <th>Schedule Impact</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagedChangeOrders.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="empty-state" style={{ textAlign: 'center' }}>
-                        No pending change orders
-                      </td>
-                    </tr>
+            <GridComponent
+              ref={coGridRef}
+              dataSource={filteredChangeOrders}
+              allowPaging={true}
+              allowResizing={true}
+              width="100%"
+              pageSettings={{ pageSize: 20, pageCount: 4 }}
+              gridLines="Horizontal"
+              rowSelected={(args) => { if (args.data) setSelectedCo(args.data as ChangeOrderSummaryDto); }}
+            >
+              <ColumnsDirective>
+                <ColumnDirective
+                  field="number"
+                  headerText="CO #"
+                  width="90"
+                  template={(co: ChangeOrderSummaryDto) => <span className="font-mono">{co.number}</span>}
+                />
+                <ColumnDirective
+                  field="description"
+                  headerText="Description"
+                  template={(co: ChangeOrderSummaryDto) => (
+                    <span style={{ whiteSpace: 'normal', wordBreak: 'break-word', display: 'block' }}>
+                      {co.description}
+                    </span>
                   )}
-                  {pagedChangeOrders.map((co) => (
-                    <tr
-                      key={co.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setSelectedCo(co)}
-                      onKeyDown={onActivateKey(() => setSelectedCo(co))}
-                    >
-                      <td className="font-mono">{co.number}</td>
-                      <td className="truncate" style={{ maxWidth: 180 }}>{co.projectId}</td>
-                      <td className="truncate" style={{ maxWidth: 260 }}>{co.description}</td>
-                      <td>{co.requestDate ? formatDate(co.requestDate) : '—'}</td>
-                      <td style={{ fontWeight: 600 }}>{`${co.amount >= 0 ? '+' : ''}${formatCurrency(co.amount)}`}</td>
-                      <td>{co.impactDays ? `+${co.impactDays} days` : '—'}</td>
-                      <td><span className={`badge ${statusBadgeClass[co.status]}`}>{statusLabel[co.status]}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {filteredChangeOrders.length > changeOrderPageSize && (
-              <Pagination
-                page={changeOrderPage}
-                pageSize={changeOrderPageSize}
-                totalCount={filteredChangeOrders.length}
-                onPageChange={setChangeOrderPage}
-              />
-            )}
+                />
+                <ColumnDirective
+                  field="requestDate"
+                  headerText="Submitted"
+                  width="120"
+                  template={(co: ChangeOrderSummaryDto) => <span>{co.requestDate ? formatDate(co.requestDate) : '—'}</span>}
+                />
+                <ColumnDirective
+                  field="amount"
+                  headerText="Amount"
+                  width="130"
+                  template={(co: ChangeOrderSummaryDto) => (
+                    <span style={{ fontWeight: 600 }}>{`${co.amount >= 0 ? '+' : ''}${formatCurrency(co.amount)}`}</span>
+                  )}
+                />
+                <ColumnDirective
+                  field="impactDays"
+                  headerText="Schedule Impact"
+                  width="140"
+                  template={(co: ChangeOrderSummaryDto) => <span>{co.impactDays ? `+${co.impactDays} days` : '—'}</span>}
+                />
+                <ColumnDirective
+                  field="status"
+                  headerText="Status"
+                  width="130"
+                  template={(co: ChangeOrderSummaryDto) => <span className={`badge ${statusBadgeClass[co.status]}`}>{statusLabel[co.status]}</span>}
+                />
+              </ColumnsDirective>
+              <Inject services={[Page, Resize]} />
+            </GridComponent>
               </>
             )}
           </div>
@@ -410,7 +423,7 @@ export function CostControlPage(): ReactElement {
         open={!!selectedCo}
         onClose={() => setSelectedCo(null)}
         title={selectedCo ? `Change Order ${selectedCo.number}` : ''}
-        subtitle={selectedCo ? `Project ${selectedCo.projectId}` : undefined}
+        subtitle={selectedCo ? `Project ${selectedCo.projectCode}` : undefined}
         size="lg"
       >
         {selectedCo && (

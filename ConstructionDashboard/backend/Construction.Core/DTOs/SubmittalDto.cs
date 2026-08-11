@@ -8,6 +8,7 @@ public class SubmittalDto
     public int Id { get; set; }
     public int ProjectId { get; set; }
     public string Number { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public SubmittalStatus Status { get; set; }
     public string? SubmittedBy { get; set; }
@@ -32,6 +33,7 @@ public class SubmittalSummaryDto
     public int Id { get; set; }
     public int ProjectId { get; set; }
     public string Number { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string? Discipline { get; set; }
     public string? SubmittalType { get; set; }
@@ -46,6 +48,7 @@ public class SubmittalCreateDto
 {
     public int ProjectId { get; set; }
     public string Number { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public SubmittalStatus Status { get; set; }
     public string? SubmittedBy { get; set; }
@@ -54,6 +57,7 @@ public class SubmittalCreateDto
 
 public class SubmittalUpdateDto
 {
+    public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public SubmittalStatus Status { get; set; }
     public string? ReviewedBy { get; set; }

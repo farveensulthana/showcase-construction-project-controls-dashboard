@@ -244,6 +244,7 @@ public class ProjectService : IProjectService
             Id = s.Id,
             ProjectId = s.ProjectId,
             Number = s.Number,
+            Title = s.Title,
             Description = s.Description,
             Discipline = s.Discipline,
             SubmittalType = s.SubmittalType,

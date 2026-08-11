@@ -36,7 +36,7 @@ builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IRiskService, RiskService>();
 builder.Services.AddScoped<IMilestoneService, MilestoneService>();
 builder.Services.AddScoped<IReportService, ReportService>();
-
+builder.Services.AddHealthChecks();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -48,71 +48,105 @@ builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
 // Add CORS for frontend access
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowLocalhost", policy =>
+    options.AddPolicy("AllowSpaApps", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176",
-                "http://localhost:4200", "http://localhost:4201", "http://localhost:4202", "http://localhost:4203", "http://localhost:4204", "http://localhost:4205")
-            .AllowAnyMethod()
-            .AllowAnyHeader();
-    });
-});
-
-// Per-IP rate limiter to mitigate trivial DoS on the public read-only showcase API. The
-// pageSize cap lives in QueryParametersDto (max 200). Together these bound the read surface.
-builder.Services.AddRateLimiter(options =>
-{
-    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
-    {
-        // Fall back to a single shared bucket if the remote IP cannot be determined (e.g. tests).
-        var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "shared";
-        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        if (corsOrigins.Length == 0)
         {
-            PermitLimit = 100,
-            Window = TimeSpan.FromSeconds(60),
-            QueueLimit = 0,
-            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
-        });
-    });
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-});
+            if (builder.Environment.IsDevelopment())
+            {
+                corsOrigins =
+                [
+                    "http://localhost:5173",
+                    "http://127.0.0.1:5173",
+                    "http://localhost:4200",
+                    "http://127.0.0.1:4200"                ];
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    "Production CORS origins are not configured.");
+            }
+        }
 
+        policy.WithOrigins(corsOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+
+    //    // Per-IP rate limiter to mitigate trivial DoS on the public read-only showcase API. The
+    //    // pageSize cap lives in QueryParametersDto (max 200). Together these bound the read surface.
+    //    builder.Services.AddRateLimiter(options =>
+    //    {
+    //        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    //        {
+    //            // Fall back to a single shared bucket if the remote IP cannot be determined (e.g. tests).
+    //            var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "shared";
+    //            return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+    //            {
+    //                PermitLimit = 100,
+    //                Window = TimeSpan.FromSeconds(60),
+    //                QueueLimit = 0,
+    //                QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+    //            });
+    //        });
+    //        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    //    });
+});
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+    // Configure the HTTP request pipeline.
+    //if (app.Environment.IsDevelopment())
+app.MapOpenApi();
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.MapOpenApi();
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/openapi/v1.json", "Construction API v1");
-        options.RoutePrefix = string.Empty; // Swagger at root
-    });
-}
+    options.SwaggerEndpoint("/openapi/v1.json", "Construction API v1");
+    options.RoutePrefix = string.Empty; // Swagger at root
+});
 
-// Database migrate + seed is an EXPLICIT, opt-in operation — it never runs automatically on
+// TODO: Database migrate + seed is an EXPLICIT, opt-in operation — it never runs automatically on
 // app start. Set RUN_SEED=true (env var or the ForceSeed config key) for one start to apply
 // pending EF Core migrations and (re)seed the deterministic showcase data. This keeps the
 // default published behaviour read-only/idempotent and prevents the hosted demo from mutating
 // its own schema or data on every boot. See README for usage.
-if (bool.TryParse(builder.Configuration["RUN_SEED"], out var runSeed) && runSeed
-    || bool.TryParse(builder.Configuration["ForceSeed"], out var forceSeed) && forceSeed)
-{
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<ConstructionDbContext>();
-    await db.Database.MigrateAsync();
-    var seedForceFully = bool.TryParse(builder.Configuration["ForceSeed"], out var fs) && fs;
-    await DatabaseSeeder.SeedAsync(db, seedForceFully);
-}
+//if (bool.TryParse(builder.Configuration["RUN_SEED"], out var runSeed) && runSeed
+//    || bool.TryParse(builder.Configuration["ForceSeed"], out var forceSeed) && forceSeed)
+//{
+//    using var scope = app.Services.CreateScope();
+//    var db = scope.ServiceProvider.GetRequiredService<ConstructionDbContext>();
+//    await db.Database.MigrateAsync();
+//    var seedForceFully = bool.TryParse(builder.Configuration["ForceSeed"], out var fs) && fs;
+//    await DatabaseSeeder.SeedAsync(db, seedForceFully);
+//}
 
-app.UseRateLimiter();
-app.UseCors("AllowLocalhost");
+//app.UseRateLimiter();
+app.UseCors("AllowSpaApps");
 
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapGet("/health", () =>
+{
+
+    return Results.Ok(new
+    {
+
+        Status = "Healthy",
+
+        Timestamp = DateTime.UtcNow,
+
+        Environment = app.Environment.EnvironmentName,
+
+        Version = "1.0.0"
+    });
+
+});
+app.MapHealthChecks("/health");
+
 
 await app.RunAsync();

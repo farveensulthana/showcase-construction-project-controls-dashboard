@@ -1,12 +1,7 @@
-export { CalendarPage } from './CalendarPage';
 export { CostControlPage } from './CostControlPage';
 export { DashboardPage } from './DashboardPage';
-export { DocumentsPage } from './DocumentsPage';
 export { NotFoundPage } from './NotFoundPage';
 export { ProjectDetailPage } from './ProjectDetailPage';
 export { ProjectsPage } from './ProjectsPage';
 export { ReportsPage } from './ReportsPage';
 export { RisksPage } from './RisksPage';
-export { SchedulePage } from './SchedulePage';
-export { SiteMapPage } from './SiteMapPage';
-export { WorkflowsPage } from './WorkflowsPage';

@@ -1,11 +1,10 @@
 import type { ReactElement } from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { GridComponent, ColumnsDirective, ColumnDirective, Inject, Page, Resize } from '@syncfusion/ej2-react-grids';
 import { projectsApi } from '../api/reports';
 import { Modal } from '../components/Modal';
-import { Pagination } from '../components/Pagination';
 import type { ProjectSummaryDto, ProjectStatus } from '../types';
-import { onActivateKey } from '../utils/a11y';
 import { downloadCsv } from '../utils/csv';
 import { format as formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/format';
@@ -54,8 +53,8 @@ function ProgressBar({ value }: { value: number }): ReactElement {
   const progress = Math.max(0, Math.min(100, Math.round(value)));
   const tone = progress >= 75 ? 'is-success' : progress >= 40 ? '' : 'is-warning';
   return (
-    <div style={{ minWidth: 120 }}>
-      <div className="progress-bar" style={{ maxWidth: 120 }}>
+    <div>
+      <div className="progress-bar">
         <div className={`progress-fill ${tone}`} style={{ width: `${progress}%` }} />
       </div>
       <span className="text-secondary" style={{ fontSize: 'var(--text-caption-size)' }}>{progress}%</span>
@@ -69,15 +68,32 @@ function StatusBadge({ status }: { status: ProjectStatus }): ReactElement {
 
 export function ProjectsPage(): ReactElement {
   const navigate = useNavigate();
+  // Status filter is driven by the URL query string (?status=Active) so
+  // other pages (e.g. the Dashboard "Active Projects" KPI card) can deep-link
+  // into a pre-filtered view. Falls back to 'All' when the param is absent or
+  // invalid. The select below writes via setSearchParams; the URL is the
+  // single source of truth — making the filter shareable and bookmarkable.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusParam = searchParams.get('status');
+  const status: ProjectStatus | 'All' = (statusOptions as string[]).includes(statusParam ?? '')
+    ? (statusParam as ProjectStatus | 'All')
+    : 'All';
+
+  function setStatusFilter(next: ProjectStatus | 'All'): void {
+    setSearchParams((prev) => {
+      if (next === 'All') prev.delete('status');
+      else prev.set('status', next);
+      return prev;
+    }, { replace: true });
+  }
+
   const [projects, setProjects] = useState<ProjectSummaryDto[]>([]);
-  const [status, setStatus] = useState<ProjectStatus | 'All'>('All');
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const pageSize = 20;
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [newProjectDraft, setNewProjectDraft] = useState<NewProjectDraft>(emptyProjectDraft);
+  const projectsGridRef = useRef<GridComponent>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,10 +115,6 @@ export function ProjectsPage(): ReactElement {
     };
   }, []);
 
-  useEffect(() => {
-    setPage(1);
-  }, [status, search]);
-
   const filteredProjects = useMemo(() => {
     const q = search.trim().toLowerCase();
     return projects.filter((p) => {
@@ -115,11 +127,6 @@ export function ProjectsPage(): ReactElement {
       return matchesStatus && matchesSearch;
     });
   }, [projects, status, search]);
-
-  const pagedProjects = useMemo(() => {
-    const startIndex = (page - 1) * pageSize;
-    return filteredProjects.slice(startIndex, startIndex + pageSize);
-  }, [filteredProjects, page]);
 
   function openNewProjectModal(): void {
     setNewProjectDraft(emptyProjectDraft());
@@ -147,7 +154,7 @@ export function ProjectsPage(): ReactElement {
     // Demo only: kept in local component state so it's visible in the UI immediately;
     // nothing is written back to the API.
     setProjects((prev) => [draft, ...prev]);
-    setStatus('All');
+    setStatusFilter('All');
     setSearch('');
     setShowNewProjectModal(false);
   }
@@ -171,11 +178,6 @@ export function ProjectsPage(): ReactElement {
 
   return (
     <div className="projects-page">
-      <header className="page-header">
-        <h1>Projects</h1>
-        <p>Portfolio overview of all active and planned construction projects.</p>
-      </header>
-
       <div className="toolbar">
         <div className="toolbar-left">
           <div className="input-with-icon">
@@ -192,7 +194,8 @@ export function ProjectsPage(): ReactElement {
           <select
             className="select"
             value={status}
-            onChange={(e) => setStatus(e.target.value as ProjectStatus | 'All')}
+            onChange={(e) => setStatusFilter(e.target.value as ProjectStatus | 'All')}
+            aria-label="Filter projects by status"
             style={{ minWidth: 160 }}
           >
             {statusOptions.map((s) => (
@@ -216,68 +219,83 @@ export function ProjectsPage(): ReactElement {
       {error && <div className="alert alert-error" role="alert">{error}</div>}
 
       {!loading && !error && (
-        <>
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Project ID</th>
-                  <th>Name</th>
-                  <th>Location</th>
-                  <th>Start Date</th>
-                  <th>Finish Date</th>
-                  <th>Progress</th>
-                  <th>Budget</th>
-                  <th>Status</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {pagedProjects.length === 0 && (
-                  <tr>
-                    <td colSpan={9} className="empty-state" style={{ textAlign: 'center' }}>
-                      No projects match the current filters
-                    </td>
-                  </tr>
-                )}
-                {pagedProjects.map((p) => (
-                  <tr
-                    key={p.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => navigate(`/projects/${p.id}`)}
-                    onKeyDown={onActivateKey(() => navigate(`/projects/${p.id}`))}
-                  >
-                    <td className="font-mono">{p.code}</td>
-                    <td className="truncate" style={{ maxWidth: 220 }}>{p.name}</td>
-                    <td>{p.location ?? '—'}</td>
-                    <td>{formatDate(p.startDate)}</td>
-                    <td>{formatDate(p.endDate)}</td>
-                    <td><ProgressBar value={p.progress} /></td>
-                    <td>{formatCurrency(p.budget)}</td>
-                    <td><StatusBadge status={p.status} /></td>
-                    <td>
-                      <button type="button" className="btn btn-ghost btn-icon btn-sm" tabIndex={-1} aria-hidden="true">
-                        <i className="icon icon-chevron-right" aria-hidden="true" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="projects-footer">
-            <span className="showing-text">
-              Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filteredProjects.length)} of {filteredProjects.length} projects
-            </span>
-            <Pagination
-              page={page}
-              pageSize={pageSize}
-              totalCount={filteredProjects.length}
-              onPageChange={setPage}
+        <div className="grid-card">
+        <GridComponent
+          ref={projectsGridRef}
+          dataSource={filteredProjects}
+          allowPaging={true}
+          allowResizing={true}
+          width="100%"
+          pageSettings={{ pageSize: 20, pageCount: 4 }}
+          gridLines="Horizontal"
+          rowSelected={(args) => { if (args.data) navigate(`/projects/${(args.data as ProjectSummaryDto).id}`); }}
+        >
+          <ColumnsDirective>
+            <ColumnDirective
+              field="code"
+              headerText="Project ID"
+              width="105"
+              template={(p: ProjectSummaryDto) => <span className="font-mono cell-clamp-2">{p.code}</span>}
             />
-          </div>
-        </>
+            <ColumnDirective
+              field="name"
+              headerText="Name"
+              minWidth="120"
+              template={(p: ProjectSummaryDto) => (
+                <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {p.name}
+                </span>
+              )}
+            />
+            <ColumnDirective
+              field="location"
+              headerText="Location"
+              width="130"
+              template={(p: ProjectSummaryDto) => <span className="cell-clamp-2">{p.location ?? '—'}</span>}
+            />
+            <ColumnDirective
+              field="startDate"
+              headerText="Start Date"
+              width="95"
+              template={(p: ProjectSummaryDto) => <span className="cell-clamp-2">{formatDate(p.startDate)}</span>}
+            />
+            <ColumnDirective
+              field="endDate"
+              headerText="Finish Date"
+              width="95"
+              template={(p: ProjectSummaryDto) => <span className="cell-clamp-2">{formatDate(p.endDate)}</span>}
+            />
+            <ColumnDirective
+              field="progress"
+              headerText="Progress"
+              width="130"
+              template={(p: ProjectSummaryDto) => <ProgressBar value={p.progress} />}
+            />
+            <ColumnDirective
+              field="budget"
+              headerText="Budget"
+              width="110"
+              template={(p: ProjectSummaryDto) => <span className="cell-clamp-2">{formatCurrency(p.budget)}</span>}
+            />
+            <ColumnDirective
+              field="status"
+              headerText="Status"
+              width="110"
+              template={(p: ProjectSummaryDto) => <StatusBadge status={p.status} />}
+            />
+            <ColumnDirective
+              headerText=""
+              width="48"
+              template={() => (
+                <button type="button" className="btn btn-ghost btn-icon btn-sm" tabIndex={-1} aria-hidden="true">
+                  <i className="icon icon-chevron-right" aria-hidden="true" />
+                </button>
+              )}
+            />
+          </ColumnsDirective>
+          <Inject services={[Page, Resize]} />
+        </GridComponent>
+        </div>
       )}
 
       <Modal

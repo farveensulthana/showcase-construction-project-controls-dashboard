@@ -230,7 +230,36 @@ public static class DatabaseSeeder
         "Drywall Partition Details - STC Rating 50"
     };
 
+    /// <summary>
+    /// Short, title-style noun phrases shown as the "Title" column in the UI's
+    /// Submittals table. Kept distinct from <see cref="SubmittalDescPool"/>
+    /// (which holds the longer narrative used in <c>Description</c>). Each
+    /// title pairs with the matching description by index so a single submittal
+    /// reads coherently — e.g. Title "Structural Steel Shop Drawings" pairs
+    /// with Description "Structural Steel Shop Drawings - W14x90 Columns".
+    /// Lengths stay well under the 300-char <c>Title</c> column limit.
+    /// </summary>
+    private static readonly string[] SubmittalTitlePool = new[]
+    {
+        "Structural Steel Shop Drawings",
+        "Ready-Mix Concrete Mix Design",
+        "HVAC Equipment Submittal",
+        "Electrical Panel Schedules",
+        "Fire Sprinkler Shop Drawings",
+        "Plumbing Fixture Schedule",
+        "Exterior Facade Samples",
+        "Roofing Membrane Product Data",
+        "Window and Glazing Schedule",
+        "Interior Finish Schedule",
+        "Elevator Shop Drawings",
+        "Acoustic Ceiling Tile Submittal",
+        "Door Hardware Schedule",
+        "Lighting Fixture Cut Sheets",
+        "Drywall Partition Details"
+    };
+
     private static readonly Func<int, string> PickSubmittalDesc = (idx) => SubmittalDescPool[idx % SubmittalDescPool.Length];
+    private static readonly Func<int, string> PickSubmittalTitle = (idx) => SubmittalTitlePool[idx % SubmittalTitlePool.Length];
 
     private static readonly Func<int, string> PickTaskName = (idx) => TaskNamePool[idx % TaskNamePool.Length];
     private static readonly Func<int, string> PickChildTaskName = (idx) => ChildTaskNamePool[idx % ChildTaskNamePool.Length];
@@ -523,6 +552,7 @@ public static class DatabaseSeeder
                 submittals.Add(new Submittal
                 {
                     Number = $"SUB-{i:D2}-{idx:D3}",
+                    Title = PickSubmittalTitle(si),
                     Description = $"{PickSubmittalDesc(si)} - {submittalType}",
                     Status = status,
                     SubmittedBy = submittedBy,
@@ -660,8 +690,14 @@ public static class DatabaseSeeder
         var submittalTypes = new[] { "Shop Drawing", "Sample", "Mockup", "Data Sheet", "Certifications" };
         var specSections = new[] { "03100 Concrete", "05100 Structural Metal", "09200 Plaster", "15400 HVAC", "16000 Electrical", "26000 Fire Alarm" };
 
+        // Existing rows may lack a Title (the column was added in a later migration
+        // and seeded with an empty default). Backfill any blank/missing Title with a
+        // valid construction-submittal noun phrase so the UI's Title column is never
+        // empty for legacy data. Index-rotation cycles through the title pool so
+        // legacy submittals get varied, realistic titles rather than all the same.
         var submittalsNeedingMetadata = await db.Submittals
-            .Where(s => s.Discipline == null || s.SubmittalType == null || s.SpecificationSection == null)
+            .Where(s => s.Discipline == null || s.SubmittalType == null || s.SpecificationSection == null
+                || s.Title == null || s.Title == string.Empty)
             .ToListAsync(ct);
 
         for (int i = 0; i < submittalsNeedingMetadata.Count; i++)
@@ -670,6 +706,10 @@ public static class DatabaseSeeder
             submittal.Discipline ??= submittalDisciplines[i % submittalDisciplines.Length];
             submittal.SubmittalType ??= submittalTypes[i % submittalTypes.Length];
             submittal.SpecificationSection ??= specSections[i % specSections.Length];
+            if (string.IsNullOrWhiteSpace(submittal.Title))
+            {
+                submittal.Title = PickSubmittalTitle(i);
+            }
         }
 
         if (rfisNeedingMetadata.Count > 0 || submittalsNeedingMetadata.Count > 0)

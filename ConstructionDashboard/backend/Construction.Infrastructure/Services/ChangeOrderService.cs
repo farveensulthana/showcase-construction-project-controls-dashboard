@@ -8,8 +8,13 @@ namespace Construction.Infrastructure.Services;
 public class ChangeOrderService : IChangeOrderService
 {
     private readonly IChangeOrderRepository _repo;
+    private readonly IProjectRepository _projects;
 
-    public ChangeOrderService(IChangeOrderRepository repo) => _repo = repo;
+    public ChangeOrderService(IChangeOrderRepository repo, IProjectRepository projects)
+    {
+        _repo = repo;
+        _projects = projects;
+    }
 
     public async Task<PagedResponseDto<ChangeOrderDto>> GetChangeOrdersAsync(QueryParametersDto query, CancellationToken ct = default)
     {
@@ -17,22 +22,32 @@ public class ChangeOrderService : IChangeOrderService
         source = ApplySort(source, query.Sort);
 
         var total = source.Count();
-        var items = source.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToList();
 
-        return await Task.FromResult(new PagedResponseDto<ChangeOrderDto>
+        // Join with projects to populate ProjectCode in one query
+        var joined = await (
+            from c in source.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize)
+            join p in _projects.Query() on c.ProjectId equals p.Id into ps
+            from p in ps.DefaultIfEmpty()
+            select new { ChangeOrder = c, ProjectCode = p != null ? p.Code : string.Empty }
+        ).ToListAsync(ct);
+
+        return new PagedResponseDto<ChangeOrderDto>
         {
-            Data = items.Select(MapChangeOrder).ToList(),
+            Data = joined.Select(x => MapChangeOrder(x.ChangeOrder, x.ProjectCode)).ToList(),
             TotalCount = total,
             Page = query.Page,
             PageSize = query.PageSize,
             TotalPages = (int)Math.Ceiling(total / (double)query.PageSize)
-        });
+        };
     }
 
     public async Task<ChangeOrderDto?> GetChangeOrderByIdAsync(int id, CancellationToken ct = default)
     {
         var entity = await _repo.GetByIdAsync(id, ct);
-        return entity is null ? null : MapChangeOrder(entity);
+        if (entity is null) return null;
+
+        var project = await _projects.GetByIdAsync(entity.ProjectId, ct);
+        return MapChangeOrder(entity, project?.Code ?? string.Empty);
     }
 
     private static IQueryable<ChangeOrder> ApplyFilter(IQueryable<ChangeOrder> source, string? filter)
@@ -76,10 +91,11 @@ public class ChangeOrderService : IChangeOrderService
         return (field, desc);
     }
 
-    private static ChangeOrderDto MapChangeOrder(ChangeOrder c) => new()
+    private static ChangeOrderDto MapChangeOrder(ChangeOrder c, string? projectCode = null) => new()
     {
         Id = c.Id,
         ProjectId = c.ProjectId,
+        ProjectCode = projectCode ?? string.Empty,
         Number = c.Number,
         Description = c.Description,
         Amount = c.Amount,

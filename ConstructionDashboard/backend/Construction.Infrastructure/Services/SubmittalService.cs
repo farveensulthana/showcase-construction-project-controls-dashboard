@@ -35,6 +35,42 @@ public class SubmittalService : ISubmittalService
         return entity is null ? null : MapSubmittal(entity);
     }
 
+    public async Task<SubmittalDto> CreateSubmittalAsync(SubmittalCreateDto dto, CancellationToken ct = default)
+    {
+        var entity = new Submittal
+        {
+            ProjectId = dto.ProjectId,
+            Number = dto.Number,
+            Title = dto.Title,
+            Description = dto.Description,
+            Status = dto.Status,
+            SubmittedBy = dto.SubmittedBy,
+            SubmittedDate = dto.SubmittedDate,
+            CreatedDate = DateTime.UtcNow
+        };
+        return await Task.FromResult(MapSubmittal(entity));
+    }
+
+    public async Task<SubmittalDto?> UpdateSubmittalAsync(int id, SubmittalUpdateDto dto, CancellationToken ct = default)
+    {
+        var entity = await _repo.GetByIdAsync(id, ct);
+        if (entity is null) return null;
+        entity.Title = dto.Title;
+        entity.Description = dto.Description;
+        entity.Status = dto.Status;
+        entity.ReviewedBy = dto.ReviewedBy;
+        entity.ReviewDate = dto.ReviewDate;
+        entity.Comments = dto.Comments;
+        entity.ModifiedDate = DateTime.UtcNow;
+        return await Task.FromResult(MapSubmittal(entity));
+    }
+
+    public async Task<bool> DeleteSubmittalAsync(int id, CancellationToken ct = default)
+    {
+        var entity = await _repo.GetByIdAsync(id, ct);
+        return entity is not null;
+    }
+
     public async Task<IReadOnlyList<SubmittalSummaryDto>> GetSubmittalsByProjectAsync(int projectId, CancellationToken ct = default)
     {
         var items = await _repo.Query()
@@ -54,6 +90,7 @@ public class SubmittalService : ISubmittalService
 
         return key switch
         {
+            "title" => source.Where(s => s.Title.Contains(value)),
             "description" => source.Where(s => s.Description.Contains(value)),
             "number" => source.Where(s => s.Number.Contains(value)),
             "status" when Enum.TryParse<SubmittalStatus>(value, true, out var status) => source.Where(s => s.Status == status),
@@ -68,6 +105,7 @@ public class SubmittalService : ISubmittalService
         return field switch
         {
             "number" => desc ? source.OrderByDescending(s => s.Number) : source.OrderBy(s => s.Number),
+            "title" => desc ? source.OrderByDescending(s => s.Title) : source.OrderBy(s => s.Title),
             "description" => desc ? source.OrderByDescending(s => s.Description) : source.OrderBy(s => s.Description),
             "submitteddate" => desc ? source.OrderByDescending(s => s.SubmittedDate) : source.OrderBy(s => s.SubmittedDate),
             "status" => desc ? source.OrderByDescending(s => s.Status) : source.OrderBy(s => s.Status),
@@ -89,6 +127,7 @@ public class SubmittalService : ISubmittalService
         Id = s.Id,
         ProjectId = s.ProjectId,
         Number = s.Number,
+        Title = s.Title,
         Description = s.Description,
         Status = s.Status,
         SubmittedBy = s.SubmittedBy,
@@ -108,6 +147,7 @@ public class SubmittalService : ISubmittalService
         Id = s.Id,
         ProjectId = s.ProjectId,
         Number = s.Number,
+        Title = s.Title,
         Description = s.Description,
         Discipline = s.Discipline,
         SubmittalType = s.SubmittalType,

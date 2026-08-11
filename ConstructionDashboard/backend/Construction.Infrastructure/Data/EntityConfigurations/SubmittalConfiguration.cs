@@ -16,6 +16,10 @@ public class SubmittalConfiguration : IEntityTypeConfiguration<Submittal>
             .IsRequired()
             .HasMaxLength(50);
 
+        builder.Property(s => s.Title)
+            .IsRequired()
+            .HasMaxLength(300);
+
         builder.Property(s => s.Description)
             .IsRequired()
             .HasMaxLength(500);
@@ -55,5 +59,6 @@ public class SubmittalConfiguration : IEntityTypeConfiguration<Submittal>
         builder.HasIndex(s => new { s.ProjectId, s.Number }).IsUnique();
         builder.HasIndex(s => s.Status);
         builder.HasIndex(s => s.SubmittedDate);
+        builder.HasIndex(s => s.Title);
     }
 }

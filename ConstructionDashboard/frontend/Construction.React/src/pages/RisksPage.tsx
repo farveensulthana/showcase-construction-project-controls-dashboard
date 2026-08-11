@@ -1,9 +1,10 @@
 import type { ReactElement } from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { GridComponent, ColumnsDirective, ColumnDirective, Inject, Page, Sort, Resize } from '@syncfusion/ej2-react-grids';
 import { risksApi, riskMatrixApi } from '../api/reports';
 import { Modal } from '../components/Modal';
-import { Pagination } from '../components/Pagination';
+import { RiskMatrixHeatmap } from '../components/RiskMatrixHeatmap';
 import type { RiskKpisDto, RiskMatrixCellViewModel, RiskProbability, RiskSeverity, RiskStatus, RiskSummaryDto } from '../types';
 import { onActivateKey } from '../utils/a11y';
 import { downloadCsv } from '../utils/csv';
@@ -117,51 +118,55 @@ function useDebouncedValue<T>(value: T, delay = 250): T {
 const severities: RiskSeverity[] = ['Low', 'Medium', 'High', 'Critical'];
 const probabilities: RiskProbability[] = ['Low', 'Medium', 'High'];
 
-function ImpactForSeverity(severity: RiskSeverity): string {
-  switch (severity) {
-    case 'Low':
-      return 'Low';
-    case 'Medium':
-      return 'Medium';
-    case 'High':
-      return 'High';
-    case 'Critical':
-      return 'Critical';
-    default:
-      return severity;
-  }
-}
-
-function matrixTone(severity: RiskSeverity, probability: RiskProbability): string {
-  if (severity === 'Critical' || (severity === 'High' && probability === 'High')) return 'negative';
-  if (severity === 'High' || probability === 'High' || (severity === 'Medium' && probability === 'Medium')) return 'warning';
-  if (severity === 'Low') return 'positive';
-  return 'info';
-}
-
-function matrixClass(tone: string): string {
-  if (tone === 'negative') return 'is-negative is-emphasis';
-  if (tone === 'warning') return 'is-warning';
-  if (tone === 'positive') return 'is-positive';
-  return 'is-info';
-}
-
 export function RisksPage(): ReactElement {
   const navigate = useNavigate();
+  // Severity and status filters are URL-driven (?severity=Critical&status=Open)
+  // so the Dashboard's "Open Risks" KPI card can deep-link into a pre-filtered
+  // view (the card surfaces "N critical", so the natural deep-link is
+  // ?severity=Critical). The in-page Risk KPI cards (Critical/High/Medium/
+  // Mitigated) also write through these setters so the URL stays in sync.
+  // Falls back to 'All' when a param is absent or invalid.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const severityParam = searchParams.get('severity');
+  const statusParam = searchParams.get('status');
+  const severity: RiskSeverity | 'All' = (severityOptions as string[]).includes(severityParam ?? '')
+    ? (severityParam as RiskSeverity | 'All')
+    : 'All';
+  const status: RiskStatus | 'All' = (statusOptions as string[]).includes(statusParam ?? '')
+    ? (statusParam as RiskStatus | 'All')
+    : 'All';
+
+  function setSeverityFilter(next: RiskSeverity | 'All'): void {
+    setSearchParams((prev) => {
+      if (next === 'All') prev.delete('severity');
+      else prev.set('severity', next);
+      return prev;
+    }, { replace: true });
+  }
+
+  function setStatusFilter(next: RiskStatus | 'All'): void {
+    setSearchParams((prev) => {
+      if (next === 'All') prev.delete('status');
+      else prev.set('status', next);
+      return prev;
+    }, { replace: true });
+  }
+
   const [risks, setRisks] = useState<RiskSummaryDto[]>([]);
   const [kpis, setKpis] = useState<RiskKpisDto | null>(null);
   const [matrix, setMatrix] = useState<RiskMatrixCellViewModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const risksGridRef = useRef<GridComponent>(null);
 
   const [search, setSearch] = useState('');
-  const [severity, setSeverity] = useState<RiskSeverity | 'All'>('All');
-  const [status, setStatus] = useState<RiskStatus | 'All'>('All');
-  const [page, setPage] = useState(1);
-  const pageSize = 20;
   const debouncedSearch = useDebouncedValue(search);
 
   const [selectedRisk, setSelectedRisk] = useState<RiskSummaryDto | null>(null);
+  // Cell click on the heatmap opens a cell-drill popup listing all risks in
+  // that probability × severity bucket, with a "View Project" action.
+  const [matrixCellRisks, setMatrixCellRisks] = useState<RiskSummaryDto[]>([]);
+  const [matrixCellLabel, setMatrixCellLabel] = useState('');
   const [showNewRiskModal, setShowNewRiskModal] = useState(false);
   const [newRiskDraft, setNewRiskDraft] = useState<NewRiskDraft>(emptyRiskDraft);
 
@@ -185,10 +190,6 @@ export function RisksPage(): ReactElement {
     };
   }, []);
 
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch, severity, status]);
-
   const filteredRisks = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
     return risks.filter((r) => {
@@ -203,11 +204,6 @@ export function RisksPage(): ReactElement {
     });
   }, [risks, debouncedSearch, severity, status]);
 
-  const pagedRisks = useMemo(() => {
-    const startIndex = (page - 1) * pageSize;
-    return filteredRisks.slice(startIndex, startIndex + pageSize);
-  }, [filteredRisks, page]);
-
   const kpiSummary = useMemo(() => {
     if (!kpis) return null;
     return [
@@ -218,25 +214,17 @@ export function RisksPage(): ReactElement {
     ];
   }, [kpis]);
 
-  const matrixLookup = useMemo(() => {
-    const map = new Map<string, RiskMatrixCellViewModel>();
-    matrix.forEach((cell) => map.set(`${cell.probability}-${cell.severity}`, cell));
-    return map;
-  }, [matrix]);
-
-  function applyKpiFilter(key: 'critical' | 'high' | 'medium' | 'mitigated'): void {
-    if (key === 'mitigated') {
-      setStatus('Mitigated');
-      setSeverity('All');
-      return;
-    }
-    const severityByKpi: Record<'critical' | 'high' | 'medium', RiskSeverity> = {
-      critical: 'Critical',
-      high: 'High',
-      medium: 'Medium',
-    };
-    setSeverity(severityByKpi[key]);
-    setStatus('All');
+  function handleMatrixCellClick(probability: RiskProbability, severity: RiskSeverity): void {
+    // Look up the full RiskSummaryDto records for this cell using the risk
+    // numbers from the matrix cell view model.
+    const cell = matrix.find((c) => c.probability === probability && c.severity === severity);
+    if (!cell || cell.riskIds.length === 0) return;
+    const cellRisks = cell.riskIds
+      .map((num) => risks.find((r) => r.number === num))
+      .filter((r): r is RiskSummaryDto => r !== undefined);
+    if (cellRisks.length === 0) return;
+    setMatrixCellLabel(`${probability} Probability · ${severity} Impact`);
+    setMatrixCellRisks(cellRisks);
   }
 
   function openNewRiskModal(): void {
@@ -271,8 +259,8 @@ export function RisksPage(): ReactElement {
     // Demo only: kept in local component state so it's visible in the UI immediately;
     // nothing is written back to the API.
     setRisks((prev) => [draft, ...prev]);
-    setSeverity('All');
-    setStatus('All');
+    setSeverityFilter('All');
+    setStatusFilter('All');
     setSearch('');
     setShowNewRiskModal(false);
   }
@@ -283,7 +271,7 @@ export function RisksPage(): ReactElement {
       [
         { header: 'ID', value: (r) => r.number },
         { header: 'Risk / Issue', value: (r) => r.title },
-        { header: 'Project', value: (r) => r.projectCode },
+        // { header: 'Project', value: (r) => r.projectCode },
         { header: 'Severity', value: (r) => r.severity },
         { header: 'Probability', value: (r) => r.probability },
         { header: 'Impact', value: (r) => formatImpact(r) },
@@ -296,10 +284,7 @@ export function RisksPage(): ReactElement {
 
   return (
     <div className="risks-page">
-      <header className="page-header">
-        <h1>Risks &amp; Issues</h1>
-        <p>Track, score, and mitigate project risks before they impact cost or schedule.</p>
-      </header>
+
 
       {loading && <div className="loading-state" aria-live="polite">Loading risks…</div>}
       {error && <div className="alert alert-error" role="alert">{error}</div>}
@@ -321,7 +306,8 @@ export function RisksPage(): ReactElement {
               <select
                 className="select"
                 value={severity}
-                onChange={(e) => setSeverity(e.target.value as RiskSeverity | 'All')}
+                onChange={(e) => setSeverityFilter(e.target.value as RiskSeverity | 'All')}
+                aria-label="Filter risks by severity"
               >
                 {severityOptions.map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -330,7 +316,8 @@ export function RisksPage(): ReactElement {
               <select
                 className="select"
                 value={status}
-                onChange={(e) => setStatus(e.target.value as RiskStatus | 'All')}
+                onChange={(e) => setStatusFilter(e.target.value as RiskStatus | 'All')}
+                aria-label="Filter risks by status"
               >
                 {statusOptions.map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -352,14 +339,9 @@ export function RisksPage(): ReactElement {
           <div className="kpi-grid" style={{ marginBottom: 'var(--space-xl)' }}>
             {kpiSummary?.map((kpi) => (
               <div
-                className="kpi-card is-clickable"
+                className="kpi-card"
                 key={kpi.key}
                 style={{ borderLeft: `4px solid ${kpiBorderColor[kpi.key]}` }}
-                role="button"
-                tabIndex={0}
-                aria-label={`Filter risk register by ${kpi.label}`}
-                onClick={() => applyKpiFilter(kpi.key)}
-                onKeyDown={onActivateKey(() => applyKpiFilter(kpi.key))}
               >
                 <div className="kpi-label">{kpi.label}</div>
                 <div className={`kpi-value ${kpi.key === 'critical' ? 'text-error' : kpi.key === 'mitigated' ? 'positive' : ''}`}>{kpi.value}</div>
@@ -371,62 +353,66 @@ export function RisksPage(): ReactElement {
             ))}
           </div>
 
-          <div className="card">
+          <div className="card grid-card">
             <div className="card-header">
               <div>
                 <h2 className="card-title">Risk Register</h2>
                 <p className="card-subtitle">Open items across portfolio</p>
               </div>
             </div>
-            <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Risk / Issue</th>
-                    <th>Project</th>
-                    <th>Severity</th>
-                    <th>Probability</th>
-                    <th>Impact</th>
-                    <th>Owner</th>
-                    <th>Mitigation Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRisks.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="empty-state" style={{ textAlign: 'center' }}>
-                        No risks match the current filters
-                      </td>
-                    </tr>
+            <GridComponent
+              ref={risksGridRef}
+              dataSource={filteredRisks}
+              allowPaging={true}
+              allowSorting={true}
+              pageSettings={{ pageSize: 20, pageCount: 4 }}
+              gridLines="Horizontal"
+              rowSelected={(args) => { if (args.data) setSelectedRisk(args.data as RiskSummaryDto); }}
+            >
+              <ColumnsDirective>
+                <ColumnDirective
+                  field="number"
+                  headerText="ID"
+                  width="80"
+                  template={(r: RiskSummaryDto) => <span className="font-mono">{r.number}</span>}
+                />
+                <ColumnDirective
+                  field="title"
+                  headerText="Risk / Issue"
+                  template={(r: RiskSummaryDto) => (
+                    <span style={{ fontWeight: 600, whiteSpace: 'normal', wordBreak: 'break-word', display: 'block' }}>
+                      {r.title}
+                    </span>
                   )}
-                  {pagedRisks.map((r) => (
-                    <tr
-                      key={r.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setSelectedRisk(r)}
-                      onKeyDown={onActivateKey(() => setSelectedRisk(r))}
-                    >
-                      <td className="font-mono">{r.number}</td>
-                      <td style={{ fontWeight: 600 }}>{r.title}</td>
-                      <td className="truncate" style={{ maxWidth: 180 }}>{r.projectCode}</td>
-                      <td><span className={`badge ${severityBadgeClass[r.severity]}`}>{r.severity}</span></td>
-                      <td>{r.probability}</td>
-                      <td>{formatImpact(r)}</td>
-                      <td>{r.owner || '—'}</td>
-                      <td><span className={`badge ${statusBadgeClass[r.status]}`}>{r.status}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <Pagination
-              page={page}
-              pageSize={pageSize}
-              totalCount={filteredRisks.length}
-              onPageChange={setPage}
-            />
+                />
+                <ColumnDirective
+                  field="severity"
+                  headerText="Severity"
+                  width="110"
+                  template={(r: RiskSummaryDto) => <span className={`badge ${severityBadgeClass[r.severity]}`}>{r.severity}</span>}
+                />
+                <ColumnDirective field="probability" headerText="Probability" width="110" />
+                <ColumnDirective
+                  field="impactDisplay"
+                  headerText="Impact"
+                  width="90"
+                  template={(r: RiskSummaryDto) => <span>{formatImpact(r)}</span>}
+                />
+                <ColumnDirective
+                  field="owner"
+                  headerText="Owner"
+                  width="150"
+                  template={(r: RiskSummaryDto) => <span>{r.owner || '—'}</span>}
+                />
+                <ColumnDirective
+                  field="status"
+                  headerText="Mitigation Status"
+                  width="150"
+                  template={(r: RiskSummaryDto) => <span className={`badge ${statusBadgeClass[r.status]}`}>{r.status}</span>}
+                />
+              </ColumnsDirective>
+              <Inject services={[Page, Sort, Resize]} />
+            </GridComponent>
           </div>
 
           <div className="card risk-matrix-card">
@@ -436,33 +422,7 @@ export function RisksPage(): ReactElement {
                 <p className="card-subtitle">Probability × Impact</p>
               </div>
             </div>
-            <div className="risk-matrix">
-              {probabilities
-                .slice()
-                .reverse()
-                .map((probability) => (
-                  <div className="risk-matrix-row" key={probability}>
-                    <div className="risk-matrix-label text-secondary">{probability}</div>
-                    {severities.map((severity) => {
-                      const cell = matrixLookup.get(`${probability}-${severity}`);
-                      const tone = matrixTone(severity, probability);
-                      const ids = cell?.riskIds.slice(0, 2) ?? [];
-                      return (
-                        <div className={`risk-matrix-cell ${matrixClass(tone)}`} key={`${probability}-${severity}`}>
-                          {ids.length ? ids.join(', ') : ''}
-                          {cell && cell.count > ids.length ? ` +${cell.count - ids.length}` : ''}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              <div className="risk-matrix-row">
-                <div />
-                {severities.map((s) => (
-                  <div className="risk-matrix-axis text-secondary" key={s}>{ImpactForSeverity(s)}</div>
-                ))}
-              </div>
-            </div>
+            <RiskMatrixHeatmap matrix={matrix} onCellClick={handleMatrixCellClick} />
           </div>
         </>
       )}
@@ -549,6 +509,57 @@ export function RisksPage(): ReactElement {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* ── Heatmap cell drill-down modal ───────────────────────────────── */}
+      <Modal
+        open={matrixCellRisks.length > 0}
+        onClose={() => setMatrixCellRisks([])}
+        title="Risks in this cell"
+        subtitle={matrixCellLabel}
+        size="lg"
+        footer={
+          <button type="button" className="btn btn-secondary" onClick={() => setMatrixCellRisks([])}>
+            Close
+          </button>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+          {matrixCellRisks.map((r) => (
+            <div
+              key={r.id}
+              className="card"
+              style={{ padding: 'var(--space-md)', cursor: 'pointer', borderLeft: `4px solid var(--color-${r.severity === 'Critical' || r.severity === 'High' ? 'error' : r.severity === 'Medium' ? 'warning' : 'success'})` }}
+              role="button"
+              tabIndex={0}
+              onClick={() => { setMatrixCellRisks([]); setSelectedRisk(r); }}
+              onKeyDown={onActivateKey(() => { setMatrixCellRisks([]); setSelectedRisk(r); })}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-sm)' }}>
+                <div>
+                  <span className="font-mono" style={{ fontSize: 'var(--text-small-size)', color: 'var(--color-secondary)' }}>{r.number}</span>
+                  <p style={{ fontWeight: 600, margin: '2px 0 4px' }}>{r.title}</p>
+                  <span style={{ fontSize: 'var(--text-small-size)', color: 'var(--color-secondary)' }}>{r.projectCode} · {r.owner || 'Unassigned'}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 'var(--space-xs)', flexShrink: 0 }}>
+                  <span className={`badge ${severityBadgeClass[r.severity]}`}>{r.severity}</span>
+                  <span className={`badge ${statusBadgeClass[r.status]}`}>{r.status}</span>
+                </div>
+              </div>
+              <div style={{ marginTop: 'var(--space-sm)', display: 'flex', gap: 'var(--space-sm)', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 'var(--text-small-size)', color: 'var(--color-secondary)' }}>Impact: {formatImpact(r)}</span>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={(e) => { e.stopPropagation(); setMatrixCellRisks([]); navigate(`/projects/${r.projectId}`); }}
+                >
+                  <i className="icon icon-external-link" aria-hidden="true" />
+                  View Project
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </Modal>
 
       <Modal

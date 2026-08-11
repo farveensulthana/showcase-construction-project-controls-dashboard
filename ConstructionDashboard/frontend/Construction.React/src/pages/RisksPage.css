@@ -125,3 +125,43 @@
   background: var(--color-info-background);
   color: var(--color-info);
 }
+
+/* ---- Syncfusion HeatMap (Risk Matrix) parity overrides ----
+   No Syncfusion theme CSS is imported — the HeatMap's color/radius/labels
+   are all driven via component props from the project tokens. These rules
+   keep the HeatMap container/typography consistent with the previous
+   `.risk-matrix` grid (font family/size, axis label color, container sizing
+   and remove any default theme chrome so the rendered result matches the
+   previous colored-cell matrix exactly. */
+.risks-page .risk-matrix-heatmap {
+  width: 100%;
+}
+
+.risks-page .risk-matrix-heatmap .e-heatmap {
+  background: transparent;
+  border: none;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-size: var(--text-small-size);
+}
+
+.risks-page .risk-matrix-heatmap .e-heatmap-axis-label,
+.risks-page .risk-matrix-heatmap .e-heatmap-xAxis-labels,
+.risks-page .risk-matrix-heatmap .e-heatmap-yAxis-labels {
+  fill: var(--color-muted);
+  color: var(--color-muted);
+  font-size: var(--text-small-size);
+}
+
+.risks-page .risk-matrix-heatmap .e-heatmap-cell-label {
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-size: var(--text-small-size);
+}
+
+/* Show pointer on cells so users know they're clickable */
+.risks-page .risk-matrix-heatmap [id*="_HeatMapRect_"] {
+  cursor: pointer;
+}
+.risks-page .risk-matrix-heatmap [id*="_HeatMapRectLabels_"] {
+  cursor: pointer;
+  pointer-events: none;
+}

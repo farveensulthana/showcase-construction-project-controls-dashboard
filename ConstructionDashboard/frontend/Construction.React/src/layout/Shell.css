@@ -112,6 +112,66 @@
   gap: var(--space-md);
 }
 
+/* In-topbar page title (route-driven). Replaces the in-content page-header
+   on the four primary pages so the topbar reads as the page header bar.
+   Typography is intentionally compact to fit the 64px topbar row. */
+.topbar-page-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.topbar-page-title-heading {
+  margin: 0;
+  font-size: var(--text-lg-size);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-primary);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-page-title-subtitle {
+  margin: 0;
+  font-size: var(--text-caption-size);
+  color: var(--color-secondary);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 767px) {
+  .topbar-page-title-subtitle {
+    display: none;
+  }
+}
+
+/* Project Detail breadcrumb in the topbar: Back button + "Projects / <code>".
+   Single inline row, vertically centered in the 64px topbar. */
+.topbar-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-small-size);
+  color: var(--color-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-breadcrumb .btn-icon.btn-sm {
+  padding: 4px;
+  margin-left: -4px;
+}
+
+.topbar-breadcrumb .font-mono {
+  color: var(--color-tertiary);
+}
+
 /* Hamburger menu toggle. Hidden by default because the sidebar is always
    visible on desktop and tablet widths. Specificity (.topbar .menu-toggle,
    0,2,0) intentionally exceeds .btn's single-class rule (0,1,0) in

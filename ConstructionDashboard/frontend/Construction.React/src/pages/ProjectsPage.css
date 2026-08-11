@@ -1,3 +1,8 @@
+.projects-page {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
 .projects-page .page-header {
   margin-bottom: var(--space-xl);
 }

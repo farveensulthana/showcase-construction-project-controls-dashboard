@@ -23,14 +23,18 @@ public class RiskService : IRiskService
         source = ApplySort(source, query.Sort);
 
         var total = await source.CountAsync(ct);
-        var items = await source
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .ToListAsync(ct);
+
+        // Join with projects to populate ProjectCode in one query
+        var joined = await (
+            from r in source.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize)
+            join p in _projects.Query() on r.ProjectId equals p.Id into ps
+            from p in ps.DefaultIfEmpty()
+            select new { Risk = r, ProjectCode = p != null ? p.Code : string.Empty }
+        ).ToListAsync(ct);
 
         return new PagedResponseDto<RiskDto>
         {
-            Data = items.Select(r => MapRisk(r)).ToList(),
+            Data = joined.Select(x => MapRisk(x.Risk, x.ProjectCode)).ToList(),
             TotalCount = total,
             Page = query.Page,
             PageSize = query.PageSize,
@@ -41,7 +45,10 @@ public class RiskService : IRiskService
     public async Task<RiskDto?> GetRiskByIdAsync(int id, CancellationToken ct = default)
     {
         var entity = await _risks.GetByIdAsync(id, ct);
-        return entity is null ? null : MapRisk(entity);
+        if (entity is null) return null;
+
+        var project = await _projects.GetByIdAsync(entity.ProjectId, ct);
+        return MapRisk(entity, project?.Code ?? string.Empty);
     }
 
     public async Task<RiskKpisDto> GetKpisAsync(CancellationToken ct = default)
@@ -85,12 +92,15 @@ public class RiskService : IRiskService
 
     public async Task<IReadOnlyList<RiskDto>> GetTopOpenRisksByProjectAsync(int projectId, int limit, CancellationToken ct = default)
     {
+        var project = await _projects.GetByIdAsync(projectId, ct);
+        var projectCode = project?.Code ?? string.Empty;
+
         var items = await _risks.Query()
             .Where(r => r.ProjectId == projectId && r.Status != RiskStatus.Closed)
             .OrderBy(r => r.Severity)
             .Take(limit)
             .ToListAsync(ct);
-        return items.Select(r => MapRisk(r)).ToList();
+        return items.Select(r => MapRisk(r, projectCode)).ToList();
     }
 
     private static IQueryable<Risk> ApplyFilter(IQueryable<Risk> source, string? filter)
