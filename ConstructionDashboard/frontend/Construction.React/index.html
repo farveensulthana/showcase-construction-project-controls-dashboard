@@ -2,18 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <script>
-      // Keep relative build assets anchored at the application root for both
-      // direct App Service URLs and the load-balanced /construction/ route.
-      (() => {
-        const mountPath = '/construction';
-        const usesMountPath = location.pathname === mountPath || location.pathname.startsWith(`${mountPath}/`);
-        const base = document.createElement('base');
-        base.href = usesMountPath ? `${mountPath}/` : '/';
-        document.head.appendChild(base);
-      })();
-    </script>
-    <link rel="icon" href="%BASE_URL%favicon.ico" />
+    <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Construction Project Controls</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
