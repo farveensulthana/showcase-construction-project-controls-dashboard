@@ -2,13 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="/favicon.ico" />
+    <script>
+      // Keep relative build assets anchored at the application root for both
+      // direct App Service URLs and the load-balanced /construction/ route.
+      (() => {
+        const mountPath = '/construction';
+        const usesMountPath = location.pathname === mountPath || location.pathname.startsWith(`${mountPath}/`);
+        const base = document.createElement('base');
+        base.href = usesMountPath ? `${mountPath}/` : '/';
+        document.head.appendChild(base);
+      })();
+    </script>
+    <link rel="icon" href="%BASE_URL%favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Construction Project Controls</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://unpkg.com/lucide-static@latest/font/lucide.css" rel="stylesheet">
 </head>
   <body>
     <div id="root"></div>
